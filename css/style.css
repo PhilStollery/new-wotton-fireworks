@@ -91,7 +91,7 @@ h6 {
         color: #ff6600 !important;
     }
     #fh5co-header #navbar li a {
-        color: rgba(0, 0, 0, 0.5) !important;
+        color: rgba(200, 200, 200, 0.5) !important;
         -webkit-transition: 0.3s;
         -o-transition: 0.3s;
         transition: 0.3s;

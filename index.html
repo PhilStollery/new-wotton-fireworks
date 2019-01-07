@@ -219,12 +219,17 @@
           <div id="map" style="width: 100%; height: 500px;" class="mapboxgl-map"></div>
           <!-- Site Map Script -->
           <script>
+            var bounds = [
+              [51.632246,-2.365725], // Southwest coordinates
+              [51.6341672,-2.3700796]  // Northeast coordinates
+            ];
             mapboxgl.accessToken = 'pk.eyJ1IjoicGhpbHN0b2xsZXJ5IiwiYSI6ImNqZjE4YW9hOTA4Y24zM2xuNmpkNjlhNjgifQ.tRF3s01di4CzjmKEulfj_Q';
             const map = new mapboxgl.Map({
               container: 'map',
               style: 'mapbox://styles/philstollery/cjmtas4tr1pwx2smis1ltef8n',
               center: [-2.367123, 51.632823],
-              zoom: 15.0
+              zoom: 15.0,
+	      maxBounds: bounds // Sets bounds as max
             });
 
             // Add zoom and rotation controls to the map.

@@ -1,0 +1,2 @@
+# Redirect default Netlify subdomain to primary domain
+https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 301!

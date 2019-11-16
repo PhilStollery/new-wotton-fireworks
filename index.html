@@ -75,44 +75,44 @@
   <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
   <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
 
-<!-- oData for event listing in google search -->	
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Event",
-  "name": "Wotton Firework Display",
-  "startDate": "2019-11-09T17:30",
-  "endDate": "2019-11-09T20:00",
-  "location": {
-    "@type": "Place",
-    "name": "Wotton Community PARC",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "New Road",
-      "addressLocality": "Wotton-under-Edge",
-      "postalCode": "GL12 8JW",
-      "addressRegion": "Gloucestershire",
-      "addressCountry": "GB"
+  <!-- oData for event listing in google search -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      "name": "Wotton Firework Display",
+      "startDate": "2019-11-09T17:30",
+      "endDate": "2019-11-09T20:00",
+      "location": {
+        "@type": "Place",
+        "name": "Wotton Community PARC",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "New Road",
+          "addressLocality": "Wotton-under-Edge",
+          "postalCode": "GL12 8JW",
+          "addressRegion": "Gloucestershire",
+          "addressCountry": "GB"
+        }
+      },
+      "image": [
+        "https://wotton-firework-display.co.uk/images/wotton-times-hill.jpg"
+      ],
+      "description": "Bonfire, fireworks and food.",
+      "offers": {
+        "@type": "Offer",
+        "url": "https://wotton-fireworks.yapsody.com/event/book/475131/30435741",
+        "price": "15",
+        "priceCurrency": "GBP",
+        "availability": "https://schema.org/InStock",
+        "validFrom": "2019-10-01T12:00"
+      },
+      "performer": {
+        "@type": "PerformingGroup",
+        "name": "Wotton-under-Edge & District Round Table 974"
+      }
     }
-  },
-  "image": [
-    "https://wotton-firework-display.co.uk/images/wotton-times-hill.jpg"
-   ],
-  "description": "Bonfire, fireworks and food.",
-  "offers": {
-    "@type": "Offer",
-    "url": "https://wotton-fireworks.yapsody.com/event/book/475131/30435741",
-    "price": "15",
-    "priceCurrency": "GBP",
-    "availability": "https://schema.org/InStock",
-    "validFrom": "2019-10-01T12:00"
-  },
-  "performer": {
-    "@type": "PerformingGroup",
-    "name": "Wotton-under-Edge & District Round Table 974"
-  }
-}
-</script>	
+  </script>
 </head>
 
 <body>
@@ -197,7 +197,7 @@
             <h2 class="pricing-plan">Child</h2>
             <div class="price"><sup class="currency">£</sup>3</div>
             <p>Children under 3 are FREE, children are up to age 16.</p>
-		  <p>Tickets on the day cost £4</p>
+            <p>Tickets on the day cost £4</p>
           </div>
         </div>
         <div class="col-md-3 col-sm-6">
@@ -205,20 +205,20 @@
             <h2 class="pricing-plan">Adult</h2>
             <div class="price"><sup class="currency">£</sup>5</div>
             <p>Adult tickets from age 16 and above.</p>
-		  <p>Tickets on the day cost £6</p>
+            <p>Tickets on the day cost £6</p>
           </div>
         </div>
         <div class="clearfix visible-sm-block"></div>
         <div class="col-md-3 col-sm-6 to-animate">
-          <div class="price-box popular">
+          <div class="price-box to-animat">
             <h2 class="pricing-plan">Family</h2>
             <div class="price"><sup class="currency">£</sup>15</div>
             <p>A family ticket includes entry for 2 adults and 3 children.</p>
-		  <p>Tickets on the day cost £20</p>
+            <p>Tickets on the day cost £20</p>
           </div>
         </div>
         <div class="col-md-3 col-sm-6">
-          <div class="price-box to-animate">
+          <div class="price-box popular">
             <div class="popular-text">Can you help?</div>
             <h2 class="pricing-plan">Donation</h2>
             <div class="price"><sup class="currency">£</sup>?</div>
@@ -253,8 +253,8 @@
           <!-- Site Map Script -->
           <script>
             var bounds = [
-              [-2.374076,51.629717], // Southwest coordinates
-              [-2.359752,51.635451]  // Northeast coordinates
+              [-2.374076, 51.629717], // Southwest coordinates
+              [-2.359752, 51.635451] // Northeast coordinates
             ];
             mapboxgl.accessToken = 'pk.eyJ1IjoicGhpbHN0b2xsZXJ5IiwiYSI6ImNqZjE4YW9hOTA4Y24zM2xuNmpkNjlhNjgifQ.tRF3s01di4CzjmKEulfj_Q';
             const map = new mapboxgl.Map({
@@ -262,7 +262,7 @@
               style: 'mapbox://styles/philstollery/cjmtas4tr1pwx2smis1ltef8n',
               center: [-2.367123, 51.632823],
               zoom: 15.0,
-	      maxBounds: bounds // Sets bounds as max
+              maxBounds: bounds // Sets bounds as max
             });
 
             // Add zoom and rotation controls to the map.
@@ -348,13 +348,12 @@
             </div>
             <div class="col-md-4 text-center to-animate">
               <div class="person">
-                <img src="images/downton.png" class="img-responsive" alt="Downton">
-                <h3 class="name">Downton</h3>
-                <div class="position">The best local haulage company</div>
-                <p>We’d like to thank the Downton deliveries for supplying us with the wood for this year’s bonfire.
+                <img src="images/buildit.jpg" class="img-responsive" alt="Downton">
+                <h3 class="name">BUILDIT</h3>
+                <div class="position">The best local builders merchant</div>
+                <p>We’d like to thank the BUILDIT for supplying us with the wood for this year’s bonfire.
                 </p>
-                <p>Established and headquartered in Gloucestershire, Downton operates 600 tractor units and 1,800 trailers out of ten major distribution hubs across the UK – Moreton Valence (headquarters), Quedgeley, Coventry, Dunstable, Leeds, Runcorn,
-                  Avonmouth, Shepton Mallet, Shotton and Tilbury – and employs around 1,350 staff.
+                <p>Buildit are a local, independent Builders Merchant offering a comprehensive range of products to the trade and DIY customer.
                 </p>
               </div>
             </div>
@@ -426,14 +425,14 @@
           <div class="row">
             <div class="col-md-8 col-md-offset-2 single-animate animate-features-2">
               <h3>We have an active <a href="https://www.facebook.com/wotton.fireworks/" title="Join us on facebook">facebook page</a>, follow us there for the latest information, a chance to win a free family ticket, and pictures of the event.</h3>
-	      <h4>Please email us with any questions or problems: <a href="mailto:help@wotton-firework-display.co.uk">help@wotton-firework-display.co.uk</a></h4>
+              <h4>Please email us with any questions or problems: <a href="mailto:help@wotton-firework-display.co.uk">help@wotton-firework-display.co.uk</a></h4>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-	
+
   <div id="footer-slider" data-section="gallery">
     <div class="owl-carousel owl-carousel-fullwidth">
       <div class="item" style="background-image:url(images/page-1.jpg)">
@@ -441,21 +440,21 @@
 
       <div class="item" style="background-image:url(images/page-2.jpg)">
       </div>
-	    
+
       <div class="item" style="background-image:url(images/page-3.jpg)">
       </div>
 
       <div class="item" style="background-image:url(images/page-4.jpg)">
       </div>
-	    
+
       <div class="item" style="background-image:url(images/page-5.jpg)">
       </div>
 
       <div class="item" style="background-image:url(images/page-6.jpg)">
-      </div>	    
+      </div>
     </div>
   </div>
-	
+
   <footer id="footer" role="contentinfo">
     <div class="container">
       <div class="row row-bottom-padded-sm">

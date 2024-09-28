@@ -1,49 +1,9 @@
+[![Netlify Status](https://api.netlify.com/api/v1/badges/491704dc-ace2-47ae-b62a-1b55caab2c9c/deploy-status)](https://app.netlify.com/sites/new-wotton/deploys)
 
-TITLE: 
-Crew - Responsive Free HTML5 template
+# Wotton-under-Edge Round Table 974
 
-AUTHOR:
-DESIGNED & DEVELOPED by FREEHTML5.co
+This is where our firework website code is hosted. Update the html and push the changes to main.
 
-Website: http://freehtml5.co/
-Twitter: http://twitter.com/fh5co
-Facebook: http://facebook.com/fh5co
+Then an automated CI/CD will take those files and publish them to https://wotton-firework-display.co.uk/.
 
-
-CREDITS:
-
-Bootstrap
-http://getbootstrap.com/
-
-jQuery
-http://jquery.com/
-
-jQuery Easing
-http://gsgd.co.uk/sandbox/jquery/easing/
-
-Modernizr
-http://modernizr.com/
-
-Google Fonts
-https://www.google.com/fonts/
-
-Icomoon
-https://icomoon.io/app/
-
-Simple Line Icons
-https://github.com/thesabbir/simple-line-icons
-
-Respond JS
-https://github.com/scottjehl/Respond/blob/master/LICENSE-MIT
-
-animate.css
-http://daneden.me/animate
-
-jQuery Waypoint
-https://github.com/imakewebthings/waypoints/blog/master/licenses.txt
-
-Owl Carousel
-http://www.owlcarousel.owlgraphic.com/
-
-Styleswitcher for Demo
-https://github.com/camsjams/jquery-style-switcher
+To make changes let us know and we'll give you access or make a pull request.

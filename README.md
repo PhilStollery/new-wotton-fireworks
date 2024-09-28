@@ -2,7 +2,7 @@
 
 # Wotton-under-Edge Round Table 974
 
-This is where our firework website code is hosted. Update the html and push the changes to main.
+This is where our firework website code is hosted. Update [index.html](https://github.com/PhilStollery/new-wotton-fireworks/blob/master/index.html) and push the changes to main.
 
 Then an automated CI/CD will take those files and publish them to https://wotton-firework-display.co.uk/.
 

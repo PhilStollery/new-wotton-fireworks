@@ -362,7 +362,7 @@
     };
 
     const disabledParkingCallout = {
-        calloutLeftDisabledForAnnotation: () => {
+      calloutLeftAccessoryForAnnotation: () => {
             const disabledViewLeft = document.createElement("div");
             disabledViewLeft.className = "left-accessory-view";
 
@@ -376,7 +376,7 @@
 
             return disabledViewLeft;
         },
-        calloutRightDisabledForAnnotation: () => {
+        calloutRightAccessoryForAnnotation: () => {
             const disabledViewRight = document.createElement("a");
             disabledViewRight.className = "right-accessory-view";
             disabledViewRight.href = "https://ti.to/wotton-firework-display/2024";

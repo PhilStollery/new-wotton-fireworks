@@ -330,8 +330,8 @@
         await setupMapKitJs();
     
         const WUE = new mapkit.CoordinateRegion(
-            new mapkit.Coordinate(51.63738472408443, -2.3529917643723763),
-            new mapkit.CoordinateSpan(0.0291094029, 0.0608114050)
+            new mapkit.Coordinate(51.632624536551404, -2.3677069019341275),
+            new mapkit.CoordinateSpan(0.010513123868229002, 0.022638199244454427)
         );
     
     // Callout delegate
@@ -341,11 +341,11 @@
             accessoryViewLeft.className = "left-accessory-view";
 
             const accessoryViewLeftIcon = document.createElement("span");
-            accessoryViewLeftIcon.textContent = "\u{1F37A}"; // Beer
+            accessoryViewLeftIcon.textContent = "\u{1F3AB}"; // Beer
             accessoryViewLeft.appendChild(accessoryViewLeftIcon);
 
             const accessoryViewLeftText = document.createElement("div");
-            accessoryViewLeftText.textContent = "Buy beer";
+            accessoryViewLeftText.textContent = "Tickets only online";
             accessoryViewLeft.appendChild(accessoryViewLeftText);
 
             return accessoryViewLeft;
@@ -353,7 +353,7 @@
         calloutRightAccessoryForAnnotation: () => {
             const accessoryViewRight = document.createElement("a");
             accessoryViewRight.className = "right-accessory-view";
-            accessoryViewRight.href = "http://www.starinnwotton.co.uk/";
+            accessoryViewRight.href = "https://ti.to/wotton-firework-display/2024";
             accessoryViewRight.target = "_blank";
             accessoryViewRight.textContent = "\u{24D8}"; // (i) icon
 
@@ -361,11 +361,11 @@
         }
     };
 
-    // Create an annotation.
-    const coordinate = new mapkit.Coordinate(51.6370279, -2.3540786); 
+    // Create an annotation. 
+    const coordinate = new mapkit.Coordinate(51.6308515, -2.3654079); 
     const annotation = new mapkit.MarkerAnnotation(coordinate, {
-        title: "Star Inn",
-        subtitle: "Our meeting point",
+        title: "Main Entrance",
+        subtitle: "Please walk",
         animates: true,
         selected: true,
         color: "#4B93E0",

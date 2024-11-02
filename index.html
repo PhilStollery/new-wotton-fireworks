@@ -250,6 +250,7 @@
           <h2 class="single-animate animate-features-1">Contact</h2>
           <div class="row">
             <div class="col-md-8 col-md-offset-2 single-animate animate-features-2">
+              <div id="map-container"></div>
               <h3>We have an active <a href="https://www.facebook.com/wotton.fireworks/" title="Join us on facebook">facebook page</a>, follow us there for the latest information, a chance to win a free family ticket, and pictures of the event.</h3>
               <h4>Please email us with any questions or problems: <a href="mailto:help@wotton-firework-display.co.uk">help@wotton-firework-display.co.uk</a></h4>
             </div>
@@ -302,6 +303,84 @@
   <script src='https://d33wubrfki0l68.cloudfront.net/js/cfcd73b8f0ac9517ae424f544139370903dfefff/js/owl.carousel.min.js'></script>
   <!-- Main JS (Do not remove) -->
   <script src='https://d33wubrfki0l68.cloudfront.net/js/fbf32406f2d8776174db85d4030d3dced503b22f/js/main.js'></script>
+  <!-- Map -->
+  
+  <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js"
+    crossorigin async
+    data-callback="initMapKit"
+    data-libraries="map,annotations"
+    data-token="eyJraWQiOiI1V1Q0VDIyNDY5IiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJMNDIyNVZYWEI0IiwiaWF0IjoxNzMwNTY4MjkyLCJvcmlnaW4iOiJ3b3R0b24tZmlyZXdvcmstZGlzcGxheS5jby51ayJ9.EE16X-7WhSEAHJQL8zNDtC6VlQJKiuFDRcumque78jvstnXoEoBDAY6mvwKrILZaEGuuj5gYMAtiDGvO7bBcaQ">
+  </script>
+  <script type="module">
+    // Wait for MapKit JS to be ready to use.
+    const setupMapKitJs = async() => {
+        // If MapKit JS is not yet loaded...
+        if (!window.mapkit || window.mapkit.loadedLibraries.length === 0) {
+            // ...await <script>'s data-callback (window.initMapKit).
+            await new Promise(resolve => { window.initMapKit = resolve });
+            // Clean up.
+            delete window.initMapKit;
+        }
+    };
+    
+    /**
+     * Script Entry Point
+     */
+    const main = async() => {
+        await setupMapKitJs();
+    
+        const WUE = new mapkit.CoordinateRegion(
+            new mapkit.Coordinate(51.63738472408443, -2.3529917643723763),
+            new mapkit.CoordinateSpan(0.0291094029, 0.0608114050)
+        );
+    
+    // Callout delegate
+    const annotationCallout = {
+        calloutLeftAccessoryForAnnotation: () => {
+            const accessoryViewLeft = document.createElement("div");
+            accessoryViewLeft.className = "left-accessory-view";
+
+            const accessoryViewLeftIcon = document.createElement("span");
+            accessoryViewLeftIcon.textContent = "\u{1F37A}"; // Beer
+            accessoryViewLeft.appendChild(accessoryViewLeftIcon);
+
+            const accessoryViewLeftText = document.createElement("div");
+            accessoryViewLeftText.textContent = "Buy beer";
+            accessoryViewLeft.appendChild(accessoryViewLeftText);
+
+            return accessoryViewLeft;
+        },
+        calloutRightAccessoryForAnnotation: () => {
+            const accessoryViewRight = document.createElement("a");
+            accessoryViewRight.className = "right-accessory-view";
+            accessoryViewRight.href = "http://www.starinnwotton.co.uk/";
+            accessoryViewRight.target = "_blank";
+            accessoryViewRight.textContent = "\u{24D8}"; // (i) icon
+
+            return accessoryViewRight;
+        }
+    };
+
+    // Create an annotation.
+    const coordinate = new mapkit.Coordinate(51.6370279, -2.3540786); 
+    const annotation = new mapkit.MarkerAnnotation(coordinate, {
+        title: "Star Inn",
+        subtitle: "Our meeting point",
+        animates: true,
+        selected: true,
+        color: "#4B93E0",
+        callout: annotationCallout
+    });
+
+        // Create a map in the element whose ID is "map-container".
+        const map = new mapkit.Map("map-container", { annotations: [annotation] });
+        map.region = WUE;
+    };
+    
+    main();
+  </script>
+
+-->
 </body>
 
 </html>

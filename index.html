@@ -361,6 +361,32 @@
         }
     };
 
+    const disabledParkingCallout = {
+        calloutLeftDisabledForAnnotation: () => {
+            const disabledViewLeft = document.createElement("div");
+            disabledViewLeft.className = "left-accessory-view";
+
+            const disabledViewLeftIcon = document.createElement("span");
+            disabledViewLeftIcon.textContent = "\u{267F}"; // Beer
+            disabledViewLeftIcon.appendChild(accessoryViewLeftIcon);
+
+            const disabledViewLeftText = document.createElement("div");
+            disabledViewLeftText.textContent = "Pre-booked parking only";
+            disabledViewLeftText.appendChild(accessoryViewLeftText);
+
+            return disabledViewLeft;
+        },
+        calloutRightDisabledForAnnotation: () => {
+            const disabledViewRight = document.createElement("a");
+            disabledViewRight.className = "right-accessory-view";
+            disabledViewRight.href = "https://ti.to/wotton-firework-display/2024";
+            disabledViewRight.target = "_blank";
+            disabledViewRight.textContent = "\u{24D8}"; // (i) icon
+
+            return disabledViewRight;
+        }
+    };
+
     // Create an annotation. 
     const coordinate = new mapkit.Coordinate(51.63208882665037,-2.3672071845256824); 
     const annotation = new mapkit.MarkerAnnotation(coordinate, {
@@ -370,6 +396,16 @@
         selected: true,
         color: "#4B93E0",
         callout: annotationCallout
+    });
+    
+    const disabledParkingcoordinate = new mapkit.Coordinate(51.63208882665037,-2.3672071845256824); 
+    const disabledAnnotation = new mapkit.MarkerAnnotation(coordinate, {
+        title: "Disabled Entrance",
+        subtitle: "Pre-booked only",
+        animates: true,
+        selected: false,
+        color: "#4B93E0",
+        callout: disabledParkingCallout
     });
 
         // Create a map in the element whose ID is "map-container".

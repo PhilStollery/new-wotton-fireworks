@@ -355,11 +355,11 @@
           accessoryViewLeft.className = "left-accessory-view";
 
           const accessoryViewLeftIcon = document.createElement("span");
-          accessoryViewLeftIcon.textContent = "\u{1F3AB}"; // Beer
+          accessoryViewLeftIcon.textContent = "\u{1F3AB}"; // Ticket
           accessoryViewLeft.appendChild(accessoryViewLeftIcon);
 
           const accessoryViewLeftText = document.createElement("div");
-          accessoryViewLeftText.textContent = "Tickets only online";
+          accessoryViewLeftText.textContent = "Gate";
           accessoryViewLeft.appendChild(accessoryViewLeftText);
 
           return accessoryViewLeft;
@@ -381,7 +381,7 @@
           disabledViewLeft.className = "left-accessory-view";
 
           const disabledViewLeftIcon = document.createElement("span");
-          disabledViewLeftIcon.textContent = "\u{267F}"; // Beer
+          disabledViewLeftIcon.textContent = "\u{267F}"; // Wheelchair
           disabledViewLeft.appendChild(disabledViewLeftIcon);
 
           const disabledViewLeftText = document.createElement("div");
@@ -398,6 +398,32 @@
           disabledViewRight.textContent = "\u{24D8}"; // (i) icon
 
           return disabledViewRight;
+        }
+      };
+
+      const parkingCallout = {
+        calloutLeftAccessoryForAnnotation: () => {
+          const parkingViewLeft = document.createElement("div");
+          parkingViewLeft.className = "left-accessory-view";
+
+          const parkingViewLeftIcon = document.createElement("span");
+          parkingViewLeftIcon.textContent = "\u{1F17F}"; // Parking
+          parkingViewLeft.appendChild(parkingViewLeftIcon);
+
+          const parkingViewLeftText = document.createElement("div");
+          parkingViewLeftText.textContent = "Pre-paid Parking";
+          parkingViewLeft.appendChild(parkingViewLeftText);
+
+          return parkingViewLeft;
+        },
+        calloutRightAccessoryForAnnotation: () => {
+          const parkingViewRight = document.createElement("a");
+          parkingViewRight.className = "right-accessory-view";
+          parkingViewRight.href = "https://ti.to/wotton-firework-display/2024";
+          parkingViewRight.target = "_blank";
+          parkingViewRight.textContent = "\u{24D8}"; // (i) icon
+
+          return parkingViewRight;
         }
       };
 
@@ -422,8 +448,18 @@
         callout: disabledParkingCallout
       });
 
+      const parkingCoordinate = new mapkit.Coordinate(51.6304590706781,-2.3641363281647045);
+      const parkingAnnotation = new mapkit.MarkerAnnotation(parkingCoordinate, {
+        title: "Parking",
+        subtitle: "Pre-booked only",
+        animates: true,
+        selected: false,
+        color: "#ff6600",
+        callout: parkingCallout
+      });
+
       // Create a map in the element whose ID is "map-container".
-      const map = new mapkit.Map("map-container", { annotations: [annotation, disabledAnnotation] });
+      const map = new mapkit.Map("map-container", { annotations: [annotation, disabledAnnotation, parkingAnnotation] });
       map.region = WUE;
     };
 

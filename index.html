@@ -404,7 +404,7 @@
       const parkingCallout = {
         calloutLeftAccessoryForAnnotation: () => {
           const parkingViewLeft = document.createElement("div");
-          parkingViewLeft.className = "left-accessory-view";
+          parkingViewLeft.className = "left-parking-accessory-view";
 
           const parkingViewLeftIcon = document.createElement("span");
           parkingViewLeftIcon.textContent = "\u{1F17F}"; // Parking
@@ -424,6 +424,32 @@
           parkingViewRight.textContent = "\u{24D8}"; // (i) icon
 
           return parkingViewRight;
+        }
+      };
+
+      const walkingCallout = {
+        calloutLeftAccessoryForAnnotation: () => {
+          const walkingViewLeft = document.createElement("div");
+          walkingViewLeft.className = "left-accessory-view";
+
+          const walkingViewLeftIcon = document.createElement("span");
+          walkingViewLeftIcon.textContent = "\u{1F9B6}"; // Walking
+          walkingViewLeft.appendChild(walkingViewLeftIcon);
+
+          const walkingViewLeftText = document.createElement("div");
+          walkingViewLeftText.textContent = "Walking";
+          walkingViewLeft.appendChild(walkingViewLeftText);
+
+          return walkingViewLeft;
+        },
+        calloutRightAccessoryForAnnotation: () => {
+          const walkingViewRight = document.createElement("a");
+          walkingViewRight.className = "right-accessory-view";
+          walkingViewRight.href = "https://ti.to/wotton-firework-display/2024";
+          walkingViewRight.target = "_blank";
+          walkingViewRight.textContent = "\u{24D8}"; // (i) icon
+
+          return walkingViewRight;
         }
       };
 
@@ -458,8 +484,19 @@
         callout: parkingCallout
       });
 
+      // maps://?daddr=()
+      const walkingCoordinate = new mapkit.Coordinate(51.6332085,-2.3605613);
+      const walkingAnnotation = new mapkit.MarkerAnnotation(walkingCoordinate, {
+        title: "Walking",
+        subtitle: "From Wotton Road",
+        animates: true,
+        selected: false,
+        color: "#ff6600",
+        callout: walkingCallout
+      });
+
       // Create a map in the element whose ID is "map-container".
-      const map = new mapkit.Map("map-container", { annotations: [annotation, disabledAnnotation, parkingAnnotation] });
+      const map = new mapkit.Map("map-container", { annotations: [annotation, disabledAnnotation, parkingAnnotation, walkingAnnotation] });
       map.region = WUE;
     };
 

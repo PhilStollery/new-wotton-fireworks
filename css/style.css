@@ -1295,7 +1295,11 @@ h6 {
 }
 
 .left-accessory-view > :first-child {
-  font-size: 24px;
+  font-size: 30px;
+}
+
+.left-parking-accessory-view > :first-child {
+  color: #2b00ff;
 }
 
 .right-accessory-view {

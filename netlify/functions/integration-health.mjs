@@ -5,14 +5,12 @@ export default async () => {
   const config = getConfig();
   return json({
     ok: true,
-    service: "Wotton Fireworks 2026 integration scaffold",
+    service: "Wotton Fireworks 2026 Tito integration",
+    mode: config.mode,
     features: {
-      automation: config.automationEnabled,
-      postPurchase: config.postPurchaseEnabled,
-      customConfirmation: config.customConfirmationEnabled,
-      meetAndGreet: config.meetAndGreetEnabled
+      priceAutomation: config.automationEnabled
     },
     missing: configurationStatus(config),
-    note: "No secret values are returned by this endpoint."
+    note: "Tito handles confirmation emails, ticket QR codes and gate check-in. No secret values are returned by this endpoint."
   });
 };

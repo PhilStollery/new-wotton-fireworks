@@ -1,0 +1,136 @@
+/* Ticket integration additions for the 2026 development branch. */
+.source-support-card,
+.ticket-availability,
+.ticket-selection-warning {
+  margin: 0 0 16px;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.source-support-card[hidden],
+.ticket-availability[hidden],
+.ticket-selection-warning[hidden] {
+  display: none !important;
+}
+
+.source-support-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  background: #FFF3D7;
+  color: var(--grey);
+  border: 2px solid var(--yellow);
+}
+
+.source-support-card .support-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--grey);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.source-support-card strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.source-support-card p {
+  margin-top: 5px;
+  color: #5D5547;
+}
+
+.ticket-availability {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  background: #292925;
+  border: 1px solid #4A4A43;
+  color: white;
+}
+
+.ticket-availability strong {
+  color: var(--yellow);
+  font-size: 1.12rem;
+}
+
+.ticket-availability span {
+  color: rgba(255,255,255,.72);
+  font-size: .9rem;
+  text-align: right;
+}
+
+.ticket-selection-warning {
+  background: #FFF4F2;
+  color: #5E221E;
+  border: 2px solid #C65A4D;
+  box-shadow: 0 10px 26px rgba(0,0,0,.12);
+}
+
+.ticket-selection-warning strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.ticket-selection-warning p {
+  margin-top: 4px;
+}
+
+.ticket-box.is-loading #tito-mount {
+  min-height: 120px;
+}
+
+.ticket-integration-state {
+  text-align: center;
+  padding: 26px 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.ticket-integration-state strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+.ticket-integration-state p {
+  color: var(--muted);
+}
+
+/* Tito Widget v2 inline exposes ordinary HTML, so inherit the event typography. */
+tito-widget,
+#tito-mount {
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+tito-widget input,
+tito-widget select,
+tito-widget button,
+tito-widget textarea {
+  font: inherit;
+}
+
+tito-widget button,
+tito-widget input[type="submit"] {
+  border-radius: 999px;
+}
+
+@media (max-width: 650px) {
+  .source-support-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-availability {
+    display: grid;
+    gap: 4px;
+  }
+
+  .ticket-availability span {
+    text-align: left;
+  }
+}

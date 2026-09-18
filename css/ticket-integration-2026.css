@@ -190,3 +190,124 @@ tito-widget input[type="submit"] {
     min-height: 280px;
   }
 }
+
+/* v5: make live availability read as part of the ticket selector rather than a
+   separate information panel. */
+.ticket-box > .ticket-availability,
+.ticket-box > .ticket-selection-warning,
+#tito-mount {
+  width: min(100%, 780px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ticket-box > .ticket-availability {
+  margin-bottom: 8px;
+  padding: 11px 15px;
+  border-radius: 10px 10px 6px 6px;
+  box-shadow: none;
+}
+
+.ticket-box > .ticket-selection-warning {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding: 13px 15px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#tito-mount {
+  margin-top: 0;
+}
+
+#tito-mount tito-widget {
+  display: block;
+  width: 100%;
+  margin: 0 !important;
+  color: var(--grey);
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+/* Tito Widget V2 is deliberately loaded inline, so its ordinary HTML can be
+   blended into the event site without replacing Tito's checkout behaviour. */
+#tito-mount tito-widget form,
+#tito-mount tito-widget form > div,
+#tito-mount tito-widget > div {
+  margin-top: 0 !important;
+}
+
+#tito-mount tito-widget input[type="number"],
+#tito-mount tito-widget select {
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--grey) !important;
+  font-weight: 700 !important;
+}
+
+#tito-mount tito-widget button,
+#tito-mount tito-widget input[type="submit"] {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+}
+
+#tito-mount tito-widget button:not(:disabled),
+#tito-mount tito-widget input[type="submit"]:not(:disabled) {
+  border-color: var(--grey) !important;
+}
+
+#tito-mount tito-widget button[type="submit"],
+#tito-mount tito-widget input[type="submit"],
+#tito-mount tito-widget button:last-of-type {
+  background: var(--grey) !important;
+  color: #fff !important;
+}
+
+#tito-mount tito-widget button:focus-visible,
+#tito-mount tito-widget input:focus-visible,
+#tito-mount tito-widget select:focus-visible {
+  outline: 3px solid var(--yellow) !important;
+  outline-offset: 2px;
+}
+
+/* First-pass checkout overlay treatment. The JS marks Tito's injected dialog so
+   we can style it without depending on Tito's private class names. */
+.wfd-tito-overlay {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  backdrop-filter: blur(2px);
+}
+
+.wfd-tito-dialog {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.28) !important;
+}
+
+.wfd-tito-dialog a {
+  color: #7a5514 !important;
+  text-underline-offset: 2px;
+}
+
+.wfd-tito-dialog button,
+.wfd-tito-dialog input,
+.wfd-tito-dialog select,
+.wfd-tito-dialog textarea {
+  font-family: "Open Sans", Arial, sans-serif !important;
+}
+
+.wfd-tito-share-row,
+.wfd-tito-share-row[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 650px) {
+  .ticket-box > .ticket-availability {
+    padding: 10px 12px;
+  }
+
+  .wfd-tito-dialog {
+    border-radius: 14px 14px 0 0 !important;
+  }
+}

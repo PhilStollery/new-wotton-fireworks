@@ -194,7 +194,7 @@
       <span class="support-mark" aria-hidden="true">♥</span>
       <div>
         <strong>Your tickets are supporting ${attrs.beneficiary}</strong>
-        <p>All profits from Wotton Firework Display go back into the local community. Because you came through a link from ${attrs.beneficiary}, a portion of the proceeds from your booking will also be donated specifically to them. Thank you for supporting local.</p>
+        <p>All profits from Wotton Firework Display go back into the local community. Because you came through a link from ${attrs.beneficiary}, a portion of the proceeds from your booking will also be donated specifically to them. Thank you for supporting your community.</p>
       </div>
     `;
     root.hidden = false;
@@ -361,7 +361,7 @@
 
     window.tito('on:registration:started', (registration) => {
       registrationInProgress = true;
-      scheduleTitoUiMark();
+      quantityGuardCleanup?.suspend?.();
       const actual = registrationQuantity(registration);
       if (lastRequestedQuantity && actual && actual < lastRequestedQuantity) {
         stickySelectionWarning = true;
@@ -377,7 +377,9 @@
       registrationInProgress = false;
       stickySelectionWarning = false;
       clearSelectionWarning();
-      scheduleTitoUiMark();
+      // Tito keeps its own checkout route in the ?tito= parameter until the
+      // overlay is dismissed. The selector guard stays hands-off while that
+      // route exists, then resumes automatically on the next selector update.
       window.setTimeout(() => refreshAvailability({ allowWaveSwitch: true }), 800);
     });
   }
@@ -390,6 +392,14 @@
     const raw = Number(el?.value);
     if (!Number.isFinite(raw) || raw < 0 || raw > 500) return 0;
     return Math.floor(raw);
+  }
+
+  function titoCheckoutRouteActive() {
+    try {
+      return new URL(window.location.href).searchParams.has('tito');
+    } catch {
+      return false;
+    }
   }
 
   function ticketQuantityControls(mount) {
@@ -687,6 +697,20 @@
     let latestSelectedTotal = 0;
     let clickCheckTimer = null;
     let evalScheduled = false;
+    let checkoutHandoffUntil = 0;
+
+    const suspendForCheckout = () => {
+      // Tito reserves the selected tickets and changes the page URL to its own
+      // ?tito=/.../registrations/... route before displaying checkout. During
+      // that handoff we must not inspect or mutate Tito's selector DOM.
+      checkoutHandoffUntil = Date.now() + 5000;
+    };
+
+    const selectorSuspended = () => (
+      registrationInProgress ||
+      titoCheckoutRouteActive() ||
+      Date.now() < checkoutHandoffUntil
+    );
 
     const groups = () => selectionGroups(currentState);
     const groupByKey = (key) => groups().find((group) => group.key === key) || null;
@@ -720,6 +744,7 @@
     };
 
     const evaluate = (availabilityRefresh = false) => {
+      if (selectorSuspended()) return;
       const mappings = mapReleaseControls(mount, currentState);
       if (!mappings.length) return;
 
@@ -763,6 +788,7 @@
     };
 
     const scheduleEvaluate = () => {
+      if (selectorSuspended()) return;
       if (!evalScheduled) {
         evalScheduled = true;
         queueMicrotask(() => {
@@ -799,6 +825,7 @@
     };
 
     const onInput = (event) => {
+      if (selectorSuspended()) return;
       if (!mount.contains(event.target)) return;
       const mappings = mapReleaseControls(mount, currentState);
       if (!mappings.some(({ control }) => control === event.target)) return;
@@ -818,10 +845,20 @@
       const button = event.target?.closest?.('button, a, [role="button"]');
       if (!button || !mount.contains(button)) return;
 
-      // Leave Tito's Continue action completely untouched. Earlier versions
-      // intercepted submit/click events here, which could leave Tito's widget in
-      // its locked loading state if our validation disagreed with Tito's cart.
-      if (continueButtons(mount).includes(button)) return;
+      // Tito owns Continue completely. The inline widget first reserves the
+      // selected tickets and moves its internal router to a ?tito= registration
+      // URL, then displays the checkout overlay. Stop all selector-side DOM work
+      // before Tito begins that transition.
+      if (continueButtons(mount).includes(button)) {
+        suspendForCheckout();
+        if (clickCheckTimer) {
+          window.clearTimeout(clickCheckTimer);
+          clickCheckTimer = null;
+        }
+        return;
+      }
+
+      if (selectorSuspended()) return;
 
       const intent = buttonIntent(button);
       if (intent === 'increment') {
@@ -850,6 +887,7 @@
     mount.addEventListener('click', onClick, true);
 
     const onKeydown = (event) => {
+      if (selectorSuspended()) return;
       if (event.key !== 'ArrowUp') return;
       const control = event.target;
       if (!control || control.tagName !== 'INPUT' || control.type !== 'number') return;
@@ -871,6 +909,7 @@
     // Watch for Tito rendering ticket rows. Counter changes are ignored so our
     // own DOM updates cannot create an observer loop.
     const observer = new MutationObserver((mutations) => {
+      if (selectorSuspended()) return;
       const meaningful = mutations.some((mutation) => {
         const target = mutation.target?.nodeType === Node.ELEMENT_NODE ? mutation.target : mutation.target?.parentElement;
         return !target?.closest?.('.wfd-group-counter');
@@ -893,8 +932,9 @@
       currentState = nextState;
       const nextCurrent = currentState?.currentWave?.key || null;
       if (nextCurrent && !visibleWaveKeys.includes(nextCurrent)) visibleWaveKeys.push(nextCurrent);
-      evaluate(true);
+      if (!selectorSuspended()) evaluate(true);
     };
+    quantityGuardCleanup.suspend = suspendForCheckout;
     quantityGuardCleanup.selectedTotal = () => latestSelectedTotal;
   }
 
@@ -919,7 +959,9 @@
 
     visibleWaveKeys = [wave.key];
     setupTitoLifecycle();
-    setupTitoUiObserver();
+    // Keep the checkout overlay completely native while the ticket selector
+    // integration is being validated. Styling the modal can be reintroduced once
+    // the reservation-to-checkout handoff is confirmed stable.
     ensureTitoScript(Boolean(state.testMode));
 
     const widget = document.createElement('tito-widget');

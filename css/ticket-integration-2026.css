@@ -440,3 +440,136 @@ tito-widget input[type="submit"] {
     text-align: left;
   }
 }
+
+/* v11: make the ticket selector read as one continuous stack rather than a
+   Tito panel with counters floating inside its own padded rectangle. */
+#tito-mount tito-widget,
+#tito-mount .tito-widget,
+#tito-mount .tito-widget-form {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+#tito-mount .tito-widget-form .tito-release {
+  margin: 0 !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+#tito-mount .tito-widget-form .tito-form-actions {
+  margin: 0 !important;
+  padding: 20px !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+#tito-mount .wfd-group-counter {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* Native Tito quantity controls. Use circles and keep active/inactive state
+   obvious without changing Tito's own quantity model. */
+#tito-mount .tito-release--decrement-quantity > a,
+#tito-mount a.tito-release--decrement-quantity--link,
+#tito-mount .wfd-quantity-minus {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: var(--grey) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+}
+
+#tito-mount .tito-release--increment-quantity > a,
+#tito-mount a.tito-release--increment-quantity--link,
+#tito-mount .wfd-quantity-plus {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: var(--yellow) !important;
+  color: var(--grey) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a svg,
+#tito-mount .tito-release--increment-quantity > a svg,
+#tito-mount a.tito-release--decrement-quantity--link svg,
+#tito-mount a.tito-release--increment-quantity--link svg,
+#tito-mount .wfd-quantity-minus svg,
+#tito-mount .wfd-quantity-plus svg {
+  display: none !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a::after,
+#tito-mount a.tito-release--decrement-quantity--link::after,
+#tito-mount .wfd-quantity-minus::after {
+  content: "−";
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#tito-mount .tito-release--increment-quantity > a::after,
+#tito-mount a.tito-release--increment-quantity--link::after,
+#tito-mount .wfd-quantity-plus::after {
+  content: "+";
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#tito-mount a.tito-release--decrement-quantity--link--disabled,
+#tito-mount .tito-release--decrement-quantity > a[class*="disabled"],
+#tito-mount .wfd-quantity-minus[aria-disabled="true"] {
+  background: #888985 !important;
+  color: #fff !important;
+  cursor: default !important;
+}
+
+#tito-mount a.tito-release--increment-quantity--link--disabled,
+#tito-mount .tito-release--increment-quantity > a[class*="disabled"],
+#tito-mount .wfd-quantity-plus.wfd-quantity-maxed,
+#tito-mount .wfd-quantity-plus[aria-disabled="true"] {
+  background: #F6D59F !important;
+  color: #767676 !important;
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+@media (max-width: 650px) {
+  #tito-mount .tito-widget-form .tito-release {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  #tito-mount .tito-widget-form .tito-form-actions {
+    padding: 16px 12px !important;
+  }
+
+  #tito-mount .wfd-group-counter {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

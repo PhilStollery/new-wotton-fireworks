@@ -14,12 +14,17 @@ function activitySummary(wave, activity) {
   const soldOut = Boolean(activity?.sold_out) || (capacity > 0 && remaining <= 0);
   const releaseDetails = (activity?.releases || [])
     .map((release) => ({
+      id: release?.id ?? null,
       slug: release?.slug,
       title: release?.title || release?.name || release?.slug || "Ticket",
       state: release?.state_name || release?.state || null,
       offSale: Boolean(release?.off_sale),
       soldOut: Boolean(release?.sold_out),
-      secret: Boolean(release?.secret)
+      secret: Boolean(release?.secret),
+      position: Number.isFinite(Number(release?.position)) ? Number(release.position) : null,
+      minTicketsPerPerson: release?.min_tickets_per_person ?? null,
+      maxTicketsPerPerson: release?.max_tickets_per_person ?? null,
+      defaultQuantity: release?.default_quantity ?? null
     }))
     .filter((release) => release.slug);
   const releases = releaseDetails.map((release) => release.slug);

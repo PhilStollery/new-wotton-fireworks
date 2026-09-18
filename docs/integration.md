@@ -56,7 +56,7 @@ Tito Activities remain the hard capacity control. The reconciler never raises th
 
 1. Complete controlled test-mode purchases through the Deploy Preview.
 2. Verify shared Activity availability and the website quantity guard near the end of a test allocation.
-3. Try to exceed the remaining Wave One allocation. The current-price quantity should cap cleanly, the page must remain responsive, and Wave Two should appear for any additional tickets without adding higher-priced tickets automatically.
+3. Try to exceed the remaining Wave One allocation. The page must remain responsive, Continue should be blocked while the current-price selection is over the shared Activity limit, and Wave Two should appear for any additional tickets without adding higher-priced tickets automatically.
 4. Test the Wave One to Wave Two handover after Wave One is genuinely sold out.
 5. Fill the live Activity IDs and release slugs in `integration-config-2026.mjs`.
 6. Test production configuration without enabling price automation.
@@ -72,6 +72,11 @@ The completed-order overlay normally includes a Tito event-homepage sharing row.
 
 ## Quantity-limit behaviour
 
-The guard is deliberately not allowed to silently move tickets onto a higher price. If a customer tries to exceed the remaining quantity in the current band, the attempted control is capped back to the maximum still available, a prominent warning explains what happened, and the next price band is revealed in the same Tito selector for the customer to choose explicitly.
+The guard is deliberately not allowed to silently move tickets onto a higher price. If a customer tries to exceed the remaining quantity in the current band, the over-limit selection remains visible, Continue is blocked, a prominent warning explains the limit, and the next price band is revealed in the same Tito selector. The customer must reduce the current-price selection to the remaining allocation and explicitly choose any additional tickets at the next price.
 
 If availability falls while somebody is already choosing tickets, for example because another customer completes an order, the current selection is not altered silently. Continue is temporarily blocked until the customer reviews and reduces the affected price band.
+
+
+## Tito order-limit configuration
+
+The website does not enforce any Adult/Child purchasing relationship. Direct testing on Tito's own event page confirmed that valid mixed Wave One / Wave Two orders work without a Child-ticket requirement. If the embedded site behaves differently, treat that as an integration defect rather than changing Tito ticket rules to accommodate it.

@@ -1,3 +1,12 @@
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Reconcile paid price bands every 10 minutes on the published production deploy.
+# The function itself still refuses to mutate Tito unless FIREWORKS_AUTOMATION_ENABLED=true.
+[functions."tito-reconcile"]
+  schedule = "*/10 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

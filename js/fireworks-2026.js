@@ -86,6 +86,7 @@
   let postPurchaseAnswers = {};
   let postPurchaseError = '';
   let postPurchaseSaveQueue = Promise.resolve();
+  let postPurchaseModalOverlay = null;
 
   function fillSharedFields() {
     const values = {
@@ -336,9 +337,14 @@
   function setupTitoUiObserver() {
     if (titoUiObserver) return;
     titoUiObserver = new MutationObserver(() => {
-      // Keep this observer deliberately passive. It only removes Tito's public
-      // share row when it appears. It never touches ticket quantities or checkout state.
+      // Keep this observer passive during checkout. Once Tito has confirmed the
+      // order, it is also allowed to hide Tito's finished-order overlay because
+      // our own continuation modal has already taken over.
       scheduleTitoUiMark();
+      window.requestAnimationFrame(() => {
+        handoffFinishedTitoFromDom();
+        if (postPurchaseRegistration || finishedRegistration) suppressFinishedTitoOverlay();
+      });
     });
     titoUiObserver.observe(document.body, { childList: true, subtree: true });
     scheduleTitoUiMark();
@@ -369,10 +375,10 @@
       stickySelectionWarning = false;
       clearSelectionWarning();
 
-      // At this point Tito has finished the order and supplies the order reference,
-      // receipt URL and ticket data. Move immediately into our own confirmation and
-      // follow-up journey so the customer cannot simply close Tito's finished-order
-      // panel and miss the invitations/questions.
+      // Tito has now completed the order. Move straight into our continuation
+      // modal rather than asking the customer to close Tito's confirmation first.
+      // Tito's finished overlay remains underneath for a moment, then is hidden
+      // once its finished-state DOM appears.
       finishedRegistration = registration || null;
       finishedWidgetResetPending = false;
       finishedOverlaySeen = false;
@@ -381,22 +387,19 @@
       clearTitoCheckoutRoute();
 
       const snapshot = postPurchaseSnapshot(finishedRegistration);
-      rememberPostPurchase(snapshot);
-      renderPostPurchaseFollowup(snapshot);
-      $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      beginPostPurchaseHandoff(snapshot);
 
-      // Let Tito render its final confirmation state, suppress its public share row,
-      // then dismiss that final overlay using Tito's own close control where possible.
-      // The fallback only hides the already-finished overlay and never touches checkout.
-      [0, 60, 180, 450].forEach((delay) => {
+      // Tito can render its finished DOM a fraction after the callback. Recheck
+      // a few times so our modal always wins the visual handoff.
+      [0, 40, 120, 300, 700].forEach((delay) => {
         window.setTimeout(() => {
           scheduleTitoUiMark();
-          dismissFinishedTitoOverlay();
+          suppressFinishedTitoOverlay();
         }, delay);
       });
 
       // Refresh availability in the background so "Book more tickets" starts from
-      // current figures without replacing the confirmation/follow-up screen.
+      // current figures without replacing the confirmation/follow-up modal.
       window.setTimeout(async () => {
         try {
           availabilityState = await fetchAvailability();
@@ -440,64 +443,145 @@
   }
 
   function titoCheckoutOverlayVisible() {
-    const candidates = [
-      ...$$('.wfd-tito-dialog'),
-      ...$$('[role="dialog"]').filter((dialog) => String(dialog.textContent || '').includes(data.eventName)),
-      ...$$('body > div').filter((candidate) => {
-        if (!String(candidate.textContent || '').includes(data.eventName)) return false;
-        try { return window.getComputedStyle(candidate).position === 'fixed'; }
-        catch { return false; }
-      })
-    ];
-    return [...new Set(candidates)].some(isVisible);
+    return $$('.tito-overlay').some(isVisible);
   }
 
-  function dismissFinishedTitoOverlay() {
-    if (!finishedRegistration) return false;
-
+  function finishedTitoOverlays() {
     const successPattern = /successfully placed your order|view receipt|print all tickets|order reference|booking complete/i;
-    const dialogs = $$('[role="dialog"]').filter((dialog) => {
-      const text = String(dialog.textContent || '');
-      return text.includes(data.eventName) && successPattern.test(text);
-    });
+    return $$('.tito-overlay').filter((overlay) => (
+      Boolean($('.tito-registration-finished', overlay)) ||
+      successPattern.test(String(overlay.textContent || ''))
+    ));
+  }
 
-    const fixedCandidates = $$('body > div').filter((candidate) => {
-      const text = String(candidate.textContent || '');
-      if (!text.includes(data.eventName) || !successPattern.test(text)) return false;
-      try { return window.getComputedStyle(candidate).position === 'fixed'; }
-      catch { return false; }
-    });
+  function registrationSlugFromTitoRoute() {
+    try {
+      const route = new URL(window.location.href).searchParams.get('tito') || '';
+      const match = route.match(/\/registrations\/([^/?#]+)/i);
+      return match ? decodeURIComponent(match[1]) : '';
+    } catch {
+      return '';
+    }
+  }
 
-    const candidates = [...new Set([...dialogs, ...fixedCandidates])];
-    for (const candidate of candidates) {
-      const close = $$('button, a, [role="button"]', candidate).find((control) => {
-        const label = normaliseText([
-          control.getAttribute?.('aria-label'),
-          control.getAttribute?.('title'),
-          control.textContent
-        ].filter(Boolean).join(' '));
-        return label === 'x' || label === '×' || /(^|\s)close(\s|$)/.test(label);
-      });
+  function finishedSnapshotFromDom() {
+    const finished = $('.tito-overlay .tito-registration-finished');
+    if (!finished) return null;
 
-      if (close) {
-        close.click();
-        return true;
-      }
+    const slug = String(finishedRegistration?.slug || registrationSlugFromTitoRoute() || '');
+    if (!slug) return null;
 
-      candidate.classList.add('wfd-finished-tito-hidden');
-      candidate.setAttribute('aria-hidden', 'true');
+    const text = String(finished.textContent || '');
+    const referenceMatch = text.match(/(?:order\s*(?:ref(?:erence)?|#)?|booking\s*(?:ref(?:erence)?|#)?)[\s:]*([A-Z0-9-]{3,})/i);
+    const receiptLink = $('.tito-receipt-link[href]', finished) || $('a[href*="receipt"]', finished);
+
+    return {
+      slug,
+      reference: String(finishedRegistration?.reference || referenceMatch?.[1] || ''),
+      receiptUrl: safeTitoUrl(finishedRegistration?.receipt_url || finishedRegistration?.receiptUrl || receiptLink?.href || ''),
+      registrationUrl: safeTitoUrl(finishedRegistration?.registration_url || finishedRegistration?.registrationUrl || ''),
+      savedAt: Date.now()
+    };
+  }
+
+  function beginPostPurchaseHandoff(snapshot) {
+    if (!snapshot?.slug) return false;
+    if (postPurchaseRegistration?.slug === snapshot.slug && postPurchaseModalOverlay?.isConnected) {
+      const merged = {
+        ...postPurchaseRegistration,
+        ...snapshot,
+        reference: snapshot.reference || postPurchaseRegistration.reference || '',
+        receiptUrl: snapshot.receiptUrl || postPurchaseRegistration.receiptUrl || '',
+        registrationUrl: snapshot.registrationUrl || postPurchaseRegistration.registrationUrl || ''
+      };
+      postPurchaseRegistration = merged;
+      rememberPostPurchase(merged);
+      renderPostPurchaseFollowup(merged);
+      suppressFinishedTitoOverlay();
       return true;
     }
-    return false;
+
+    clearTitoCheckoutRoute();
+    rememberPostPurchase(snapshot);
+    renderPostPurchaseFollowup(snapshot);
+    suppressFinishedTitoOverlay();
+    return true;
+  }
+
+  function handoffFinishedTitoFromDom() {
+    if (postPurchaseRegistration?.slug && postPurchaseModalOverlay?.isConnected) return true;
+    const snapshot = finishedSnapshotFromDom();
+    if (!snapshot) return false;
+    return beginPostPurchaseHandoff(snapshot);
+  }
+
+  function suppressFinishedTitoOverlay() {
+    let found = false;
+    finishedTitoOverlays().forEach((overlay) => {
+      overlay.classList.add('wfd-finished-tito-hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      found = true;
+    });
+    return found;
+  }
+
+  function disposeFinishedTitoOverlay() {
+    const overlays = [...new Set([
+      ...finishedTitoOverlays(),
+      ...$$('.tito-overlay.wfd-finished-tito-hidden')
+    ])];
+
+    overlays.forEach((overlay) => {
+      const close = $('.tito-close-x', overlay);
+      if (close && typeof close.click === 'function') {
+        try { close.click(); } catch { /* completed-order fallback below */ }
+      }
+      // The order is already finished. If Tito leaves the overlay behind after
+      // the close action, removing that finished DOM is safe and prevents it
+      // blocking a later booking.
+      window.setTimeout(() => {
+        if (overlay.isConnected) overlay.remove();
+      }, 60);
+    });
+  }
+
+  function ensurePostPurchaseOverlay() {
+    if (postPurchaseModalOverlay?.isConnected) {
+      return $('.wfd-post-purchase-modal-content', postPurchaseModalOverlay);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'wfd-post-purchase-overlay';
+    overlay.className = 'wfd-post-purchase-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'wfd-post-purchase-title');
+    overlay.innerHTML = `
+      <div class="wfd-post-purchase-modal">
+        <div class="wfd-post-purchase-modal-content"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    postPurchaseModalOverlay = overlay;
+    return $('.wfd-post-purchase-modal-content', overlay);
   }
 
   function setPostPurchaseMode(active) {
     const shell = $('.ticket-selector-shell');
-    const root = $('#post-purchase-followup');
+    const legacyRoot = $('#post-purchase-followup');
     const ticketBox = $('.ticket-box');
+
     if (shell) shell.hidden = Boolean(active);
-    if (root) root.hidden = !active;
+    if (legacyRoot) legacyRoot.hidden = true;
     ticketBox?.classList.toggle('showing-post-purchase', Boolean(active));
+    document.body.classList.toggle('wfd-post-purchase-modal-open', Boolean(active));
+
+    if (active) {
+      ensurePostPurchaseOverlay();
+    } else if (postPurchaseModalOverlay) {
+      postPurchaseModalOverlay.remove();
+      postPurchaseModalOverlay = null;
+    }
   }
 
   function postChoice(stage, title, body, positiveLabel, positiveValue, negativeLabel, negativeValue) {
@@ -548,7 +632,7 @@
   }
 
   function rememberPostPurchase(snapshot = postPurchaseRegistration) {
-    if (!snapshot?.slug || !snapshot?.reference) return;
+    if (!snapshot?.slug) return;
     try {
       localStorage.setItem(POST_PURCHASE_STORAGE_KEY, JSON.stringify({
         ...snapshot,
@@ -563,7 +647,7 @@
   function loadPendingPostPurchase() {
     try {
       const stored = JSON.parse(localStorage.getItem(POST_PURCHASE_STORAGE_KEY) || 'null');
-      if (!stored?.slug || !stored?.reference || !stored.savedAt) return null;
+      if (!stored?.slug || !stored.savedAt) return null;
       if (Date.now() - Number(stored.savedAt) > POST_PURCHASE_STORAGE_TTL_MS) {
         localStorage.removeItem(POST_PURCHASE_STORAGE_KEY);
         return null;
@@ -582,7 +666,7 @@
 
   async function savePostPurchaseChoice(stage, value) {
     const snapshot = postPurchaseRegistration;
-    if (!snapshot?.slug || !snapshot?.reference) throw new Error('Booking details are not available.');
+    if (!snapshot?.slug) throw new Error('Booking details are not available.');
 
     const response = await fetch(POST_PURCHASE_API, {
       method: 'POST',
@@ -615,10 +699,13 @@
     });
   }
 
-  async function showTicketSelectorAgain() {
+  async function resetAfterPostPurchase({ scrollToTickets = false } = {}) {
     clearPendingPostPurchase();
+    disposeFinishedTitoOverlay();
+    finishedRegistration = null;
     postPurchaseRegistration = null;
     setPostPurchaseMode(false);
+
     ticketPlaceholder('Refreshing ticket availability…', 'Just a moment while we check the latest allocation.');
     try {
       availabilityState = await fetchAvailability();
@@ -634,12 +721,25 @@
     } catch (error) {
       ticketPlaceholder('Ticket availability could not be refreshed.', error.message);
     }
-    $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (scrollToTickets) $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function showTicketSelectorAgain() {
+    await resetAfterPostPurchase({ scrollToTickets: true });
+  }
+
+  function leavePostPurchaseForVisit(event) {
+    event?.preventDefault?.();
+    resetAfterPostPurchase({ scrollToTickets: false }).finally(() => {
+      const visit = $('#visit');
+      if (visit) visit.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      else window.location.hash = 'visit';
+    });
   }
 
   function renderPostPurchaseFollowup(snapshot) {
-    const root = $('#post-purchase-followup');
-    if (!root || !snapshot?.slug || !snapshot?.reference) {
+    if (!snapshot?.slug) {
       setPostPurchaseMode(false);
       if (availabilityState?.currentWave) createTitoWidget(availabilityState);
       return;
@@ -647,6 +747,18 @@
 
     postPurchaseRegistration = snapshot;
     setPostPurchaseMode(true);
+    suppressFinishedTitoOverlay();
+    const root = ensurePostPurchaseOverlay();
+    if (!root) return;
+
+    const reference = String(snapshot.reference || '');
+    const referenceHtml = reference ? `<strong>${escapeHtml(reference)}</strong>` : '';
+    const bookingCompleteCopy = reference
+      ? `Booking ${referenceHtml} is complete.`
+      : 'Your booking is complete.';
+    const optionalCopy = reference
+      ? `These are optional and save immediately against booking ${referenceHtml}.`
+      : 'These are optional and save immediately against this booking.';
 
     root.innerHTML = `
       <div class="post-purchase-card">
@@ -654,8 +766,8 @@
           <span class="post-purchase-success-mark" aria-hidden="true">✓</span>
           <div>
             <p class="kicker kicker-dark">Booking confirmed</p>
-            <h3>You're booked for Wotton Fireworks</h3>
-            <p>Booking <strong>${escapeHtml(snapshot.reference)}</strong> is complete. Your confirmation email contains all of your ticket QR codes.</p>
+            <h3 id="wfd-post-purchase-title">You're booked for Wotton Fireworks</h3>
+            <p>${bookingCompleteCopy} Your confirmation email contains all of your ticket QR codes.</p>
             ${snapshot.receiptUrl ? `<p><a class="text-link" href="${escapeHtml(snapshot.receiptUrl)}" target="_blank" rel="noopener">View your receipt</a></p>` : ''}
           </div>
         </div>
@@ -663,7 +775,7 @@
         <div class="post-purchase-heading">
           <p class="kicker kicker-dark">Before you go</p>
           <h3>Two invitations and three quick choices</h3>
-          <p>These are optional and save immediately against booking <strong>${escapeHtml(snapshot.reference)}</strong>.</p>
+          <p>${optionalCopy}</p>
         </div>
 
         <div class="post-purchase-invite">
@@ -747,7 +859,7 @@
         queuePostPurchaseChoice(button.dataset.stage, button.dataset.value);
       });
     });
-    $('#post-purchase-plan-visit', root)?.addEventListener('click', clearPendingPostPurchase);
+    $('#post-purchase-plan-visit', root)?.addEventListener('click', leavePostPurchaseForVisit);
     $('#post-purchase-book-more', root)?.addEventListener('click', showTicketSelectorAgain);
   }
 

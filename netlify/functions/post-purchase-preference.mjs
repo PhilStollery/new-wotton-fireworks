@@ -23,12 +23,12 @@ export default async (request) => {
   try {
     const { registrationSlug, reference, stage, value } = await readJson(request);
 
-    if (!registrationSlug || !reference) throw new HttpError(400, "Booking details are missing");
+    if (!registrationSlug) throw new HttpError(400, "Booking details are missing");
     if (!allowed[stage]?.has(value)) throw new HttpError(400, "Invalid preference choice");
 
     const registration = await getRegistration(String(registrationSlug));
     if (!registration) throw new HttpError(404, "Booking not found");
-    if (String(registration.reference || "") !== String(reference)) {
+    if (reference && String(registration.reference || "") !== String(reference)) {
       throw new HttpError(400, "Booking details do not match");
     }
     if (!registrationIsUsable(registration)) {

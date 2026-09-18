@@ -17,7 +17,7 @@ The tested multi-ticket setup sends one confirmation email containing all of the
 The website handles:
 
 - the embedded Tito booking panel;
-- shared price-band availability;
+- shared price-band availability, shown directly with the ticket selector;
 - protection against selecting more tickets than remain at the current price;
 - source tracking and beneficiary messaging;
 - later, the Super Saver to Advance to Standard transition logic.

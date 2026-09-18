@@ -347,14 +347,81 @@ tito-widget input[type="submit"] {
   }
 }
 
-/* v7: later price bands are mounted from the outset so Tito keeps one stable
-   cart state. We reveal/hide only the individual release rows. */
+/* v10: later price bands stay mounted in Tito's one stable widget, but each
+   band is presented as its own counter + ticket-row block. */
+#tito-mount .wfd-group-counter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 0;
+  padding: 11px 16px;
+  background: #F6F0E2;
+  border-top: 1px solid #DED7C8;
+  border-bottom: 1px solid #DED7C8;
+  color: var(--grey);
+}
+
+#tito-mount .wfd-group-counter:first-child {
+  border-top: 0;
+}
+
+#tito-mount .wfd-group-counter[hidden],
 #tito-mount .wfd-release-row[hidden] {
   display: none !important;
 }
 
-#tito-mount .wfd-release-row[data-wfd-wave="wave-2"]:not([hidden]) {
-  animation: wfd-wave-reveal .16s ease-out;
+#tito-mount .wfd-group-counter strong {
+  color: #8B6217;
+  font-size: 1rem;
+}
+
+#tito-mount .wfd-group-counter span {
+  color: var(--muted);
+  font-size: .84rem;
+  text-align: right;
+}
+
+#tito-mount .wfd-group-counter.is-empty {
+  background: #FFF3D7;
+}
+
+#tito-mount .wfd-group-counter.is-empty strong {
+  color: #6D4A0B;
+}
+
+#tito-mount .wfd-group-counter.is-over {
+  background: #FFF4F2;
+  border-color: #E8AAA3;
+}
+
+#tito-mount .wfd-group-counter.is-over strong {
+  color: #8A3028;
+}
+
+/* Quantity limits are enforced locally in the embedded selector. The + button
+   is the positive action, so use the same Round Table orange as the page. Tito's
+   Continue button is deliberately left entirely under Tito's own control. */
+#tito-mount .wfd-quantity-plus {
+  background: var(--yellow) !important;
+  border-color: var(--yellow) !important;
+  color: var(--grey) !important;
+  font-weight: 800 !important;
+}
+
+#tito-mount .wfd-quantity-plus:hover:not(.wfd-quantity-maxed),
+#tito-mount .wfd-quantity-plus:focus-visible:not(.wfd-quantity-maxed) {
+  filter: brightness(.96);
+}
+
+#tito-mount .wfd-quantity-plus.wfd-quantity-maxed {
+  opacity: .42 !important;
+  cursor: not-allowed !important;
+}
+
+#tito-mount .wfd-release-row[data-wfd-group-kind="admission"]:not([hidden]),
+#tito-mount .wfd-group-counter[data-wfd-group-kind="admission"]:not([hidden]) {
+  animation: wfd-wave-reveal .14s ease-out;
 }
 
 @keyframes wfd-wave-reveal {
@@ -362,35 +429,14 @@ tito-widget input[type="submit"] {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 650px) {
+  #tito-mount .wfd-group-counter {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+  }
 
-/* v8: visually mark Continue as unavailable without changing Tito's own
-   disabled state or touching its internal cart controls. */
-#tito-mount .wfd-capacity-blocked {
-  opacity: .55 !important;
-  cursor: not-allowed !important;
-}
-
-/* v9: the availability counter is live against the quantities currently
-   selected in the browser. The Admin API supplies the starting allocation;
-   selecting tickets subtracts from that number immediately. */
-.ticket-selector-shell > .ticket-availability.is-empty {
-  background: #FFF3D7;
-}
-
-.ticket-selector-shell > .ticket-availability.is-empty strong {
-  color: #6D4A0B;
-}
-
-.ticket-selector-shell > .ticket-availability.is-over {
-  background: #FFF4F2;
-  border-bottom-color: #E8AAA3;
-}
-
-.ticket-selector-shell > .ticket-availability.is-over strong {
-  color: #8A3028;
-}
-
-#tito-mount input[type="number"][data-wfd-shared-max]:out-of-range {
-  border-color: #C65A4D !important;
-  box-shadow: 0 0 0 2px rgba(198,90,77,.14) !important;
+  #tito-mount .wfd-group-counter span {
+    text-align: left;
+  }
 }

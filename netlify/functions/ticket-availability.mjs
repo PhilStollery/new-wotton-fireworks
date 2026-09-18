@@ -12,9 +12,13 @@ function activitySummary(wave, activity) {
   const allocationCount = Number(activity?.allocation_count ?? activity?.allocationCount ?? 0);
   const remaining = Math.max(capacity - allocationCount, 0);
   const soldOut = Boolean(activity?.sold_out) || (capacity > 0 && remaining <= 0);
-  const releases = (activity?.releases || [])
-    .map((release) => release?.slug)
-    .filter(Boolean);
+  const releaseDetails = (activity?.releases || [])
+    .map((release) => ({
+      slug: release?.slug,
+      title: release?.title || release?.name || release?.slug || "Ticket"
+    }))
+    .filter((release) => release.slug);
+  const releases = releaseDetails.map((release) => release.slug);
 
   if (!releases.length) {
     throw new HttpError(503, `No ticket releases are attached to Tito Activity "${wave.activityName}".`);
@@ -27,7 +31,8 @@ function activitySummary(wave, activity) {
     allocationCount,
     remaining,
     soldOut,
-    releases
+    releases,
+    releaseDetails
   };
 }
 

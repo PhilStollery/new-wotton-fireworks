@@ -70,6 +70,10 @@
   let quantityGuardCleanup = null;
   let availabilityTimer = null;
   let lastRequestedQuantity = 0;
+  let visibleWaveKeys = [];
+  let titoUiObserver = null;
+  let titoUiScheduled = false;
+  let stickySelectionWarning = false;
 
   function fillSharedFields() {
     const values = {
@@ -268,6 +272,68 @@
     return 0;
   }
 
+  function markTitoUi() {
+    const eventPath = availabilityState?.event ? `https://ti.to/${availabilityState.event}`.replace(/\/+$/, '') : '';
+
+    // The checkout overlay is injected into the page in inline mode. Mark it so
+    // our CSS can make it feel like part of the Wotton site without taking over
+    // Tito's checkout logic.
+    $$('[role="dialog"]').forEach((dialog) => {
+      if (!String(dialog.textContent || '').includes(data.eventName)) return;
+      dialog.classList.add('wfd-tito-dialog');
+      dialog.parentElement?.classList.add('wfd-tito-overlay');
+    });
+
+    // Fallback for Tito versions that do not expose role="dialog".
+    $$('body > div').forEach((candidate) => {
+      if (candidate.classList.contains('wfd-tito-overlay')) return;
+      if (!String(candidate.textContent || '').includes(data.eventName)) return;
+      const style = window.getComputedStyle(candidate);
+      if (style.position !== 'fixed') return;
+      candidate.classList.add('wfd-tito-overlay');
+      const panel = [...candidate.children].find((child) => {
+        const childStyle = window.getComputedStyle(child);
+        return childStyle.backgroundColor && childStyle.backgroundColor !== 'rgba(0, 0, 0, 0)';
+      });
+      panel?.classList.add('wfd-tito-dialog');
+    });
+
+    // Tito's finished-order panel includes a "Share this event" row pointing
+    // at the ti.to event homepage. Our website is the public event page, so the
+    // safest treatment is simply to suppress that row rather than advertising a
+    // second public URL during checkout.
+    if (eventPath) {
+      $$('input').forEach((input) => {
+        const value = String(input.value || '').replace(/\/+$/, '');
+        if (value !== eventPath) return;
+        let node = input;
+        for (let i = 0; i < 6 && node; i += 1, node = node.parentElement) {
+          if (/share this event/i.test(String(node.textContent || ''))) {
+            node.classList.add('wfd-tito-share-row');
+            node.hidden = true;
+            break;
+          }
+        }
+      });
+    }
+  }
+
+  function scheduleTitoUiMark() {
+    if (titoUiScheduled) return;
+    titoUiScheduled = true;
+    window.requestAnimationFrame(() => {
+      titoUiScheduled = false;
+      markTitoUi();
+    });
+  }
+
+  function setupTitoUiObserver() {
+    if (titoUiObserver) return;
+    titoUiObserver = new MutationObserver(scheduleTitoUiMark);
+    titoUiObserver.observe(document.body, { childList: true, subtree: true });
+    scheduleTitoUiMark();
+  }
+
   function setupTitoLifecycle() {
     if (titoLifecycleReady) return;
     titoLifecycleReady = true;
@@ -276,8 +342,10 @@
 
     window.tito('on:registration:started', (registration) => {
       registrationInProgress = true;
+      scheduleTitoUiMark();
       const actual = registrationQuantity(registration);
       if (lastRequestedQuantity && actual && actual < lastRequestedQuantity) {
+        stickySelectionWarning = true;
         showSelectionWarning(
           'Ticket availability has just changed',
           `You selected ${lastRequestedQuantity} tickets, but only ${actual} could be reserved. Please review your order carefully before continuing.`
@@ -288,7 +356,9 @@
 
     window.tito('on:registration:finished', () => {
       registrationInProgress = false;
+      stickySelectionWarning = false;
       clearSelectionWarning();
+      scheduleTitoUiMark();
       window.setTimeout(() => refreshAvailability({ allowWaveSwitch: true }), 800);
     });
   }
@@ -322,63 +392,191 @@
   }
 
   function setGuarded(button, guarded) {
-    if (guarded) {
+    if (guarded && button.dataset.wfdAvailabilityGuard !== 'true') {
       button.dataset.wfdAvailabilityGuard = 'true';
+      button.dataset.wfdPreviousAriaDisabled = button.getAttribute('aria-disabled') || '';
+      if ('disabled' in button) button.dataset.wfdPreviousDisabled = button.disabled ? 'true' : 'false';
       button.setAttribute('aria-disabled', 'true');
       if ('disabled' in button) button.disabled = true;
       else button.style.pointerEvents = 'none';
-    } else if (button.dataset.wfdAvailabilityGuard === 'true') {
-      delete button.dataset.wfdAvailabilityGuard;
-      button.removeAttribute('aria-disabled');
-      if ('disabled' in button) button.disabled = false;
+    } else if (!guarded && button.dataset.wfdAvailabilityGuard === 'true') {
+      const previousAria = button.dataset.wfdPreviousAriaDisabled || '';
+      if (previousAria) button.setAttribute('aria-disabled', previousAria);
+      else button.removeAttribute('aria-disabled');
+      if ('disabled' in button) button.disabled = button.dataset.wfdPreviousDisabled === 'true';
       else button.style.pointerEvents = '';
+      delete button.dataset.wfdAvailabilityGuard;
+      delete button.dataset.wfdPreviousAriaDisabled;
+      delete button.dataset.wfdPreviousDisabled;
     }
   }
 
-  function installQuantityGuard(remaining) {
+  function nextAvailableWave(state, waveKey) {
+    const waves = Array.isArray(state?.waves) ? state.waves : [];
+    const index = waves.findIndex((wave) => wave.key === waveKey);
+    if (index < 0) return null;
+    return waves.slice(index + 1).find((wave) => !wave.soldOut && Number(wave.remaining || 0) > 0) || null;
+  }
+
+  function visibleWavesFromState(state, keys = visibleWaveKeys) {
+    const waves = Array.isArray(state?.waves) ? state.waves : [];
+    return keys.map((key) => waves.find((wave) => wave.key === key)).filter(Boolean);
+  }
+
+  function installQuantityGuard(state, waves, restoreSelections = []) {
     if (quantityGuardCleanup) quantityGuardCleanup();
 
     const mount = $('#tito-mount');
-    if (!mount || !Number.isFinite(Number(remaining))) return;
+    if (!mount || !waves.length) return;
 
-    let currentRemaining = Number(remaining);
+    let waveState = waves;
+    let pendingRestore = Array.isArray(restoreSelections) && restoreSelections.length ? [...restoreSelections] : null;
+    let correcting = false;
+    let revealing = false;
+    let latestSelectedTotal = 0;
 
-    const evaluate = () => {
+    const expectedControlCount = () => waveState.reduce((sum, wave) => sum + wave.releases.length, 0);
+
+    const groupForWave = (controls, waveIndex) => {
+      let start = 0;
+      for (let i = 0; i < waveIndex; i += 1) start += waveState[i].releases.length;
+      return controls.slice(start, start + waveState[waveIndex].releases.length);
+    };
+
+    const dispatchQuantityUpdate = (control) => {
+      correcting = true;
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+      correcting = false;
+    };
+
+    const restoreWhenReady = (controls) => {
+      if (!pendingRestore || controls.length < pendingRestore.length) return;
+      const values = pendingRestore;
+      pendingRestore = null;
+      correcting = true;
+      values.forEach((value, index) => {
+        if (!controls[index]) return;
+        controls[index].value = String(Math.max(0, Number(value) || 0));
+        controls[index].dispatchEvent(new Event('input', { bubbles: true }));
+        controls[index].dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      correcting = false;
+    };
+
+    const revealNextWave = (controls, wave, attemptedTotal) => {
+      if (revealing) return;
+      const next = nextAvailableWave(state, wave.key);
+      if (!next || visibleWaveKeys.includes(next.key)) return;
+      revealing = true;
+      const selections = controls.map(numericValue);
+      stickySelectionWarning = true;
+      showSelectionWarning(
+        `Only ${wave.remaining} ${Number(wave.remaining) === 1 ? 'ticket' : 'tickets'} left at this price`,
+        `You tried to select ${attemptedTotal}. Your current-price selection has been kept within the ${wave.remaining} still available, and the next price is now shown below for any additional tickets. Nothing has been added at the higher price.`
+      );
+      window.setTimeout(() => {
+        createTitoWidget(state, {
+          waveKeys: [...visibleWaveKeys, next.key],
+          restoreSelections: selections,
+          preserveWarning: true
+        });
+      }, 0);
+    };
+
+    const evaluate = (sourceControl = null, availabilityRefresh = false) => {
       const controls = ticketQuantityControls(mount);
-      controls.forEach((control) => {
-        if (control.tagName === 'INPUT') control.max = String(currentRemaining);
-        if (control.tagName === 'SELECT') {
-          [...control.options].forEach((option) => {
-            const value = Number(option.value);
-            if (Number.isFinite(value) && value > currentRemaining) option.disabled = true;
-          });
+      if (controls.length < expectedControlCount()) return;
+      restoreWhenReady(controls);
+
+      let stale = false;
+      let warningShown = false;
+
+      waveState.forEach((wave, waveIndex) => {
+        const group = groupForWave(controls, waveIndex);
+        const remaining = Math.max(0, Number(wave.remaining || 0));
+
+        group.forEach((control) => {
+          if (control.tagName === 'INPUT' && control.max !== String(remaining)) {
+            control.max = String(remaining);
+          }
+        });
+
+        const total = group.reduce((sum, control) => sum + numericValue(control), 0);
+        if (total <= remaining) return;
+
+        if (sourceControl && group.includes(sourceControl) && !availabilityRefresh) {
+          const attemptedValue = numericValue(sourceControl);
+          const others = total - attemptedValue;
+          const allowedValue = Math.max(0, remaining - others);
+          const attemptedTotal = total;
+          sourceControl.value = String(allowedValue);
+          dispatchQuantityUpdate(sourceControl);
+
+          const next = nextAvailableWave(state, wave.key);
+          if (next && !visibleWaveKeys.includes(next.key)) {
+            revealNextWave(controls, wave, attemptedTotal);
+          } else if (next) {
+            stickySelectionWarning = true;
+            showSelectionWarning(
+              `Only ${remaining} ${remaining === 1 ? 'ticket' : 'tickets'} left at this price`,
+              'You have reached the current-price allocation. Add any extra tickets using the next-price options shown below.'
+            );
+          } else {
+            stickySelectionWarning = true;
+            showSelectionWarning(
+              `Only ${remaining} ${remaining === 1 ? 'ticket' : 'tickets'} left`,
+              'You have reached the remaining allocation, so no more tickets can be added here.'
+            );
+          }
+          warningShown = true;
+          return;
         }
+
+        // This path is for a genuine concurrency change, for example another
+        // customer buying tickets while this customer is still choosing. We do
+        // not silently alter their selection. Continue is temporarily blocked
+        // until they reduce the affected price band themselves.
+        stale = true;
+        stickySelectionWarning = true;
+        showSelectionWarning(
+          'Ticket availability has just changed',
+          `Only ${remaining} ${remaining === 1 ? 'ticket is' : 'tickets are'} now left at this price, but you currently have ${total} selected in this price band. Please reduce that selection before continuing.`
+        );
+        warningShown = true;
       });
 
-      const selected = controls.reduce((sum, control) => sum + numericValue(control), 0);
-      lastRequestedQuantity = selected;
-      const tooMany = selected > currentRemaining;
+      latestSelectedTotal = controls.reduce((sum, control) => sum + numericValue(control), 0);
+      lastRequestedQuantity = latestSelectedTotal;
+      continueButtons(mount).forEach((button) => setGuarded(button, stale));
 
-      continueButtons(mount).forEach((button) => setGuarded(button, tooMany));
-
-      if (tooMany) {
-        const noun = currentRemaining === 1 ? 'ticket is' : 'tickets are';
-        showSelectionWarning(
-          `Only ${currentRemaining} ${noun} left at this price`,
-          `You've selected ${selected} tickets. Please reduce your selection to ${currentRemaining} or fewer to continue.`
-        );
-      } else {
+      if (sourceControl && !warningShown && !stale) {
+        stickySelectionWarning = false;
+        clearSelectionWarning();
+      } else if (!sourceControl && !stickySelectionWarning && !stale) {
         clearSelectionWarning();
       }
     };
 
-    const onInput = () => evaluate();
+    const onInput = (event) => {
+      if (correcting) return;
+      // Number inputs normally emit both input and change for one click. Handle
+      // only input for them so a second event cannot immediately clear the
+      // allocation warning. Selects are handled on change.
+      if (event.target?.tagName === 'INPUT' && event.type === 'change') return;
+      if (event.target?.tagName === 'SELECT' && event.type === 'input') return;
+      if (!ticketQuantityControls(mount).includes(event.target)) return;
+      evaluate(event.target, false);
+    };
     mount.addEventListener('input', onInput, true);
     mount.addEventListener('change', onInput, true);
 
+    // Only watch for Tito rendering/re-rendering DOM. The previous version also
+    // watched the disabled attribute while changing it itself, which could create
+    // a mutation loop and freeze the page at the allocation limit.
     const observer = new MutationObserver(() => evaluate());
-    observer.observe(mount, { childList: true, subtree: true, attributes: true, attributeFilter: ['value', 'disabled'] });
-    window.setTimeout(evaluate, 150);
+    observer.observe(mount, { childList: true, subtree: true });
+    window.setTimeout(() => evaluate(), 120);
 
     quantityGuardCleanup = () => {
       observer.disconnect();
@@ -387,13 +585,15 @@
       continueButtons(mount).forEach((button) => setGuarded(button, false));
     };
 
-    quantityGuardCleanup.updateRemaining = (next) => {
-      currentRemaining = Number(next);
-      evaluate();
+    quantityGuardCleanup.updateAvailability = (nextState) => {
+      state = nextState;
+      waveState = visibleWavesFromState(nextState);
+      evaluate(null, true);
     };
+    quantityGuardCleanup.selectedTotal = () => latestSelectedTotal;
   }
 
-  function createTitoWidget(state) {
+  function createTitoWidget(state, options = {}) {
     const mount = $('#tito-mount');
     const wave = state?.currentWave;
     if (!mount || !wave) {
@@ -401,23 +601,34 @@
       return;
     }
 
-    if (!Array.isArray(wave.releases) || !wave.releases.length) {
+    const requestedKeys = Array.isArray(options.waveKeys) && options.waveKeys.length ? options.waveKeys : [wave.key];
+    const waves = visibleWavesFromState(state, requestedKeys);
+    const releases = waves.flatMap((item) => item.releases || []);
+
+    if (!releases.length) {
       ticketPlaceholder('Test tickets are not configured yet.', 'Check the test Activity names in integration-config-2026.mjs.');
       return;
     }
 
+    visibleWaveKeys = waves.map((item) => item.key);
     setupTitoLifecycle();
+    setupTitoUiObserver();
     ensureTitoScript(Boolean(state.testMode));
 
     const widget = document.createElement('tito-widget');
     widget.setAttribute('event', state.event);
-    widget.setAttribute('releases', wave.releases.join(','));
+    widget.setAttribute('releases', releases.join(','));
     widget.setAttribute('source', storedAttribution?.source || data.defaultSource || 'Direct');
     if (storedAttribution?.metadata) {
       widget.setAttribute('prefill', JSON.stringify({ metadata: storedAttribution.metadata }));
     }
     mount.replaceChildren(widget);
-    installQuantityGuard(wave.remaining);
+    installQuantityGuard(state, waves, options.restoreSelections || []);
+    if (!options.preserveWarning) {
+      stickySelectionWarning = false;
+      clearSelectionWarning();
+    }
+    scheduleTitoUiMark();
   }
 
   async function refreshAvailability({ allowWaveSwitch = false } = {}) {
@@ -428,13 +639,23 @@
       availabilityState = next;
       renderAvailability(next.currentWave);
 
-      if (quantityGuardCleanup?.updateRemaining && next.currentWave) {
-        quantityGuardCleanup.updateRemaining(next.currentWave.remaining);
+      if (quantityGuardCleanup?.updateAvailability) {
+        quantityGuardCleanup.updateAvailability(next);
       }
 
       if (allowWaveSwitch && !registrationInProgress && previousKey !== nextKey) {
-        clearSelectionWarning();
-        createTitoWidget(next);
+        const selected = quantityGuardCleanup?.selectedTotal?.() || 0;
+        if (selected === 0) {
+          stickySelectionWarning = false;
+          clearSelectionWarning();
+          createTitoWidget(next);
+        } else {
+          stickySelectionWarning = true;
+          showSelectionWarning(
+            'Ticket availability has just changed',
+            'The current price band changed while you were choosing tickets. Please review the quantities shown before continuing.'
+          );
+        }
       }
     } catch (error) {
       console.warn('WFD ticket availability refresh failed:', error.message);

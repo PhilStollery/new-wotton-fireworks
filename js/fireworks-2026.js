@@ -434,6 +434,7 @@
     let correcting = false;
     let revealing = false;
     let latestSelectedTotal = 0;
+    let clickCheckTimer = null;
 
     const expectedControlCount = () => waveState.reduce((sum, wave) => sum + wave.releases.length, 0);
 
@@ -441,13 +442,6 @@
       let start = 0;
       for (let i = 0; i < waveIndex; i += 1) start += waveState[i].releases.length;
       return controls.slice(start, start + waveState[waveIndex].releases.length);
-    };
-
-    const dispatchQuantityUpdate = (control) => {
-      correcting = true;
-      control.dispatchEvent(new Event('input', { bubbles: true }));
-      control.dispatchEvent(new Event('change', { bubbles: true }));
-      correcting = false;
     };
 
     const restoreWhenReady = (controls) => {
@@ -464,17 +458,13 @@
       correcting = false;
     };
 
-    const revealNextWave = (controls, wave, attemptedTotal) => {
+    const revealNextWave = (controls, wave) => {
       if (revealing) return;
       const next = nextAvailableWave(state, wave.key);
       if (!next || visibleWaveKeys.includes(next.key)) return;
+
       revealing = true;
       const selections = controls.map(numericValue);
-      stickySelectionWarning = true;
-      showSelectionWarning(
-        `Only ${wave.remaining} ${Number(wave.remaining) === 1 ? 'ticket' : 'tickets'} left at this price`,
-        `You tried to select ${attemptedTotal}. Your current-price selection has been kept within the ${wave.remaining} still available, and the next price is now shown below for any additional tickets. Nothing has been added at the higher price.`
-      );
       window.setTimeout(() => {
         createTitoWidget(state, {
           waveKeys: [...visibleWaveKeys, next.key],
@@ -484,13 +474,14 @@
       }, 0);
     };
 
-    const evaluate = (sourceControl = null, availabilityRefresh = false) => {
+    const evaluate = (availabilityRefresh = false) => {
       const controls = ticketQuantityControls(mount);
       if (controls.length < expectedControlCount()) return;
       restoreWhenReady(controls);
 
-      let stale = false;
-      let warningShown = false;
+      let blocked = false;
+      let warning = null;
+      let reveal = null;
 
       waveState.forEach((wave, waveIndex) => {
         const group = groupForWave(controls, waveIndex);
@@ -505,90 +496,91 @@
         const total = group.reduce((sum, control) => sum + numericValue(control), 0);
         if (total <= remaining) return;
 
-        if (sourceControl && group.includes(sourceControl) && !availabilityRefresh) {
-          const attemptedValue = numericValue(sourceControl);
-          const others = total - attemptedValue;
-          const allowedValue = Math.max(0, remaining - others);
-          const attemptedTotal = total;
-          sourceControl.value = String(allowedValue);
-          dispatchQuantityUpdate(sourceControl);
-
-          const next = nextAvailableWave(state, wave.key);
-          if (next && !visibleWaveKeys.includes(next.key)) {
-            revealNextWave(controls, wave, attemptedTotal);
-          } else if (next) {
-            stickySelectionWarning = true;
-            showSelectionWarning(
-              `Only ${remaining} ${remaining === 1 ? 'ticket' : 'tickets'} left at this price`,
-              'You have reached the current-price allocation. Add any extra tickets using the next-price options shown below.'
-            );
-          } else {
-            stickySelectionWarning = true;
-            showSelectionWarning(
-              `Only ${remaining} ${remaining === 1 ? 'ticket' : 'tickets'} left`,
-              'You have reached the remaining allocation, so no more tickets can be added here.'
-            );
-          }
-          warningShown = true;
-          return;
+        blocked = true;
+        const next = nextAvailableWave(state, wave.key);
+        if (next && !visibleWaveKeys.includes(next.key) && !reveal) {
+          reveal = { wave, controls };
         }
 
-        // This path is for a genuine concurrency change, for example another
-        // customer buying tickets while this customer is still choosing. We do
-        // not silently alter their selection. Continue is temporarily blocked
-        // until they reduce the affected price band themselves.
-        stale = true;
-        stickySelectionWarning = true;
-        showSelectionWarning(
-          'Ticket availability has just changed',
-          `Only ${remaining} ${remaining === 1 ? 'ticket is' : 'tickets are'} now left at this price, but you currently have ${total} selected in this price band. Please reduce that selection before continuing.`
-        );
-        warningShown = true;
+        if (!warning) {
+          const noun = remaining === 1 ? 'ticket' : 'tickets';
+          if (availabilityRefresh) {
+            warning = {
+              title: 'Ticket availability has just changed',
+              copy: `Only ${remaining} ${noun} are now left at this price, but you currently have ${total} selected at this price. Please reduce that selection to ${remaining} or fewer.${next ? ' The next price is available below for any additional tickets.' : ''}`
+            };
+          } else {
+            warning = {
+              title: `Only ${remaining} ${noun} left at this price`,
+              copy: `You've selected ${total} at this price. Please reduce that selection to ${remaining} or fewer.${next ? ' The next price is now available below for any additional tickets.' : ''}`
+            };
+          }
+        }
       });
 
       latestSelectedTotal = controls.reduce((sum, control) => sum + numericValue(control), 0);
       lastRequestedQuantity = latestSelectedTotal;
-      continueButtons(mount).forEach((button) => setGuarded(button, stale));
+      continueButtons(mount).forEach((button) => setGuarded(button, blocked));
 
-      if (sourceControl && !warningShown && !stale) {
+      if (warning) {
+        stickySelectionWarning = true;
+        showSelectionWarning(warning.title, warning.copy);
+      } else {
         stickySelectionWarning = false;
         clearSelectionWarning();
-      } else if (!sourceControl && !stickySelectionWarning && !stale) {
-        clearSelectionWarning();
       }
+
+      // Tito's +/- controls can update the number field programmatically without
+      // emitting a normal input/change event. Any over-limit selection found here
+      // still represents a customer action unless this evaluation was explicitly
+      // triggered by an availability refresh, so reveal the next band immediately.
+      if (reveal) revealNextWave(reveal.controls, reveal.wave);
     };
 
     const onInput = (event) => {
       if (correcting) return;
-      // Number inputs normally emit both input and change for one click. Handle
-      // only input for them so a second event cannot immediately clear the
-      // allocation warning. Selects are handled on change.
       if (event.target?.tagName === 'INPUT' && event.type === 'change') return;
       if (event.target?.tagName === 'SELECT' && event.type === 'input') return;
       if (!ticketQuantityControls(mount).includes(event.target)) return;
-      evaluate(event.target, false);
+      evaluate(false);
     };
     mount.addEventListener('input', onInput, true);
     mount.addEventListener('change', onInput, true);
 
-    // Only watch for Tito rendering/re-rendering DOM. The previous version also
-    // watched the disabled attribute while changing it itself, which could create
-    // a mutation loop and freeze the page at the allocation limit.
-    const observer = new MutationObserver(() => evaluate());
+    // Tito's plus/minus buttons do not consistently emit an input/change event.
+    // Check on the next animation frame, plus a short fallback, so the warning and
+    // next price band appear immediately instead of waiting for the 10s poll.
+    const onClick = (event) => {
+      const button = event.target?.closest?.('button, [role="button"]');
+      if (!button || !mount.contains(button)) return;
+      if (continueButtons(mount).includes(button)) return;
+      window.requestAnimationFrame(() => evaluate(false));
+      if (clickCheckTimer) window.clearTimeout(clickCheckTimer);
+      clickCheckTimer = window.setTimeout(() => evaluate(false), 80);
+    };
+    mount.addEventListener('click', onClick, true);
+
+    // Watch only structural changes from Tito. We deliberately do not watch the
+    // disabled/value attributes, because our own guard changes those and that can
+    // create a feedback loop. A structural re-render is treated as a customer-side
+    // update; genuine concurrency changes arrive via updateAvailability below.
+    const observer = new MutationObserver(() => window.requestAnimationFrame(() => evaluate(false)));
     observer.observe(mount, { childList: true, subtree: true });
-    window.setTimeout(() => evaluate(), 120);
+    window.setTimeout(() => evaluate(false), 100);
 
     quantityGuardCleanup = () => {
       observer.disconnect();
+      if (clickCheckTimer) window.clearTimeout(clickCheckTimer);
       mount.removeEventListener('input', onInput, true);
       mount.removeEventListener('change', onInput, true);
+      mount.removeEventListener('click', onClick, true);
       continueButtons(mount).forEach((button) => setGuarded(button, false));
     };
 
     quantityGuardCleanup.updateAvailability = (nextState) => {
       state = nextState;
       waveState = visibleWavesFromState(nextState);
-      evaluate(null, true);
+      evaluate(true);
     };
     quantityGuardCleanup.selectedTotal = () => latestSelectedTotal;
   }

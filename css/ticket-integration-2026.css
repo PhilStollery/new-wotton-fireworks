@@ -792,3 +792,53 @@ tito-widget input[type="submit"] {
     width: 100%;
   }
 }
+
+/* v14: move customers straight from a completed Tito order into our own
+   confirmation and follow-up journey. */
+.wfd-finished-tito-hidden {
+  display: none !important;
+}
+
+.post-purchase-success {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 22px 26px;
+  background: #EEF5E8;
+  border-bottom: 1px solid #C7D6B7;
+}
+
+.post-purchase-success-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #5C6B43;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.post-purchase-success h3 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.post-purchase-success p {
+  color: #4F5A43;
+}
+
+.post-purchase-success .kicker {
+  margin-bottom: 6px;
+  color: #52633D;
+}
+
+@media (max-width: 650px) {
+  .post-purchase-success {
+    grid-template-columns: 1fr;
+    padding: 18px 16px;
+  }
+}

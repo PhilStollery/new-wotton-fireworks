@@ -8,6 +8,8 @@
   const ATTRIBUTION_KEY = 'wottonFireworksAttribution2026';
   const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
   const POST_PURCHASE_API = '/api/post-purchase-preference';
+  const POST_PURCHASE_STORAGE_KEY = 'wfdPendingPostPurchase2026';
+  const POST_PURCHASE_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
 
 
   const sourceTracks = {
@@ -303,48 +305,23 @@
 
   function markTitoUi() {
     const eventPath = availabilityState?.event ? `https://ti.to/${availabilityState.event}`.replace(/\/+$/, '') : '';
+    if (!eventPath) return;
 
-    // The checkout overlay is injected into the page in inline mode. Mark it so
-    // our CSS can make it feel like part of the Wotton site without taking over
-    // Tito's checkout logic.
-    $$('[role="dialog"]').forEach((dialog) => {
-      if (!String(dialog.textContent || '').includes(data.eventName)) return;
-      dialog.classList.add('wfd-tito-dialog');
-      dialog.parentElement?.classList.add('wfd-tito-overlay');
-    });
-
-    // Fallback for Tito versions that do not expose role="dialog".
-    $$('body > div').forEach((candidate) => {
-      if (candidate.classList.contains('wfd-tito-overlay')) return;
-      if (!String(candidate.textContent || '').includes(data.eventName)) return;
-      const style = window.getComputedStyle(candidate);
-      if (style.position !== 'fixed') return;
-      candidate.classList.add('wfd-tito-overlay');
-      const panel = [...candidate.children].find((child) => {
-        const childStyle = window.getComputedStyle(child);
-        return childStyle.backgroundColor && childStyle.backgroundColor !== 'rgba(0, 0, 0, 0)';
-      });
-      panel?.classList.add('wfd-tito-dialog');
-    });
-
-    // Tito's finished-order panel includes a "Share this event" row pointing
-    // at the ti.to event homepage. Our website is the public event page, so the
-    // safest treatment is simply to suppress that row rather than advertising a
-    // second public URL during checkout.
-    if (eventPath) {
-      $$('input').forEach((input) => {
-        const value = String(input.value || '').replace(/\/+$/, '');
-        if (value !== eventPath) return;
-        let node = input;
-        for (let i = 0; i < 6 && node; i += 1, node = node.parentElement) {
-          if (/share this event/i.test(String(node.textContent || ''))) {
-            node.classList.add('wfd-tito-share-row');
-            node.hidden = true;
-            break;
-          }
+    // Keep checkout DOM handling deliberately tiny. The only thing we change
+    // inside Tito is the finished-order "Share this event" row, because the
+    // public destination we want customers to use is this website.
+    $$('input').forEach((input) => {
+      const value = String(input.value || '').replace(/\/+$/, '');
+      if (value !== eventPath) return;
+      let node = input;
+      for (let i = 0; i < 6 && node; i += 1, node = node.parentElement) {
+        if (/share this event/i.test(String(node.textContent || ''))) {
+          node.classList.add('wfd-tito-share-row');
+          node.hidden = true;
+          break;
         }
-      });
-    }
+      }
+    });
   }
 
   function scheduleTitoUiMark() {
@@ -359,8 +336,9 @@
   function setupTitoUiObserver() {
     if (titoUiObserver) return;
     titoUiObserver = new MutationObserver(() => {
+      // Keep this observer deliberately passive. It only removes Tito's public
+      // share row when it appears. It never touches ticket quantities or checkout state.
       scheduleTitoUiMark();
-      window.requestAnimationFrame(() => resetSelectorAfterFinishedCheckout());
     });
     titoUiObserver.observe(document.body, { childList: true, subtree: true });
     scheduleTitoUiMark();
@@ -391,32 +369,43 @@
       stickySelectionWarning = false;
       clearSelectionWarning();
 
-      // registration:finished is Tito's confirmed-order callback. Keep the
-      // completed-order panel visible, but remove Tito's private checkout route
-      // from our public URL immediately. Once the customer dismisses the panel,
-      // reset the selector with fresh availability so another booking can start.
+      // At this point Tito has finished the order and supplies the order reference,
+      // receipt URL and ticket data. Move immediately into our own confirmation and
+      // follow-up journey so the customer cannot simply close Tito's finished-order
+      // panel and miss the invitations/questions.
       finishedRegistration = registration || null;
-      finishedWidgetResetPending = true;
-      finishedOverlaySeen = titoCheckoutOverlayVisible();
+      finishedWidgetResetPending = false;
+      finishedOverlaySeen = false;
       postPurchaseAnswers = {};
       postPurchaseError = '';
       clearTitoCheckoutRoute();
 
-      try {
-        const snapshot = {
-          slug: registration?.slug || '',
-          reference: registration?.reference || ''
-        };
-        if (snapshot.slug) sessionStorage.setItem('wfdFinishedRegistration2026', JSON.stringify(snapshot));
-      } catch {
-        // Session storage is optional.
-      }
+      const snapshot = postPurchaseSnapshot(finishedRegistration);
+      rememberPostPurchase(snapshot);
+      renderPostPurchaseFollowup(snapshot);
+      $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      // Clean integration point for the forthcoming post-checkout questions.
-      // The event contains Tito's full finished-registration payload but does not
-      // alter Tito's own confirmation email or ticket delivery.
+      // Let Tito render its final confirmation state, suppress its public share row,
+      // then dismiss that final overlay using Tito's own close control where possible.
+      // The fallback only hides the already-finished overlay and never touches checkout.
+      [0, 60, 180, 450].forEach((delay) => {
+        window.setTimeout(() => {
+          scheduleTitoUiMark();
+          dismissFinishedTitoOverlay();
+        }, delay);
+      });
+
+      // Refresh availability in the background so "Book more tickets" starts from
+      // current figures without replacing the confirmation/follow-up screen.
+      window.setTimeout(async () => {
+        try {
+          availabilityState = await fetchAvailability();
+        } catch (error) {
+          console.warn('WFD post-checkout availability refresh failed:', error.message);
+        }
+      }, 500);
+
       window.dispatchEvent(new CustomEvent('wfd:registration-finished', { detail: finishedRegistration }));
-      window.requestAnimationFrame(() => resetSelectorAfterFinishedCheckout());
     });
   }
 
@@ -463,6 +452,45 @@
     return [...new Set(candidates)].some(isVisible);
   }
 
+  function dismissFinishedTitoOverlay() {
+    if (!finishedRegistration) return false;
+
+    const successPattern = /successfully placed your order|view receipt|print all tickets|order reference|booking complete/i;
+    const dialogs = $$('[role="dialog"]').filter((dialog) => {
+      const text = String(dialog.textContent || '');
+      return text.includes(data.eventName) && successPattern.test(text);
+    });
+
+    const fixedCandidates = $$('body > div').filter((candidate) => {
+      const text = String(candidate.textContent || '');
+      if (!text.includes(data.eventName) || !successPattern.test(text)) return false;
+      try { return window.getComputedStyle(candidate).position === 'fixed'; }
+      catch { return false; }
+    });
+
+    const candidates = [...new Set([...dialogs, ...fixedCandidates])];
+    for (const candidate of candidates) {
+      const close = $$('button, a, [role="button"]', candidate).find((control) => {
+        const label = normaliseText([
+          control.getAttribute?.('aria-label'),
+          control.getAttribute?.('title'),
+          control.textContent
+        ].filter(Boolean).join(' '));
+        return label === 'x' || label === '×' || /(^|\s)close(\s|$)/.test(label);
+      });
+
+      if (close) {
+        close.click();
+        return true;
+      }
+
+      candidate.classList.add('wfd-finished-tito-hidden');
+      candidate.setAttribute('aria-hidden', 'true');
+      return true;
+    }
+    return false;
+  }
+
   function setPostPurchaseMode(active) {
     const shell = $('.ticket-selector-shell');
     const root = $('#post-purchase-followup');
@@ -490,11 +518,66 @@
     `;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[character]);
+  }
+
+  function safeTitoUrl(value) {
+    try {
+      const url = new URL(String(value || ''));
+      return url.protocol === 'https:' && url.hostname === 'ti.to' ? url.href : '';
+    } catch {
+      return '';
+    }
+  }
+
   function postPurchaseSnapshot(registration = finishedRegistration) {
     return {
       slug: String(registration?.slug || ''),
-      reference: String(registration?.reference || '')
+      reference: String(registration?.reference || ''),
+      receiptUrl: safeTitoUrl(registration?.receipt_url || registration?.receiptUrl || ''),
+      registrationUrl: safeTitoUrl(registration?.registration_url || registration?.registrationUrl || ''),
+      savedAt: Date.now()
     };
+  }
+
+  function rememberPostPurchase(snapshot = postPurchaseRegistration) {
+    if (!snapshot?.slug || !snapshot?.reference) return;
+    try {
+      localStorage.setItem(POST_PURCHASE_STORAGE_KEY, JSON.stringify({
+        ...snapshot,
+        savedAt: Number(snapshot.savedAt || Date.now()),
+        answers: { ...postPurchaseAnswers }
+      }));
+    } catch {
+      // The immediate post-checkout journey still works without localStorage.
+    }
+  }
+
+  function loadPendingPostPurchase() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(POST_PURCHASE_STORAGE_KEY) || 'null');
+      if (!stored?.slug || !stored?.reference || !stored.savedAt) return null;
+      if (Date.now() - Number(stored.savedAt) > POST_PURCHASE_STORAGE_TTL_MS) {
+        localStorage.removeItem(POST_PURCHASE_STORAGE_KEY);
+        return null;
+      }
+      postPurchaseAnswers = stored.answers && typeof stored.answers === 'object' ? { ...stored.answers } : {};
+      return stored;
+    } catch {
+      return null;
+    }
+  }
+
+  function clearPendingPostPurchase() {
+    try { localStorage.removeItem(POST_PURCHASE_STORAGE_KEY); }
+    catch { /* optional storage */ }
   }
 
   async function savePostPurchaseChoice(stage, value) {
@@ -524,6 +607,7 @@
     task.then(() => {
       postPurchaseAnswers[stage] = value;
       postPurchaseError = '';
+      rememberPostPurchase(postPurchaseRegistration);
       renderPostPurchaseFollowup(postPurchaseRegistration);
     }).catch((error) => {
       postPurchaseError = error.message || 'We could not save that choice. Please try again.';
@@ -531,12 +615,24 @@
     });
   }
 
-  function showTicketSelectorAgain() {
+  async function showTicketSelectorAgain() {
+    clearPendingPostPurchase();
+    postPurchaseRegistration = null;
     setPostPurchaseMode(false);
-    if (availabilityState?.currentWave) {
-      createTitoWidget(availabilityState);
-    } else {
-      ticketPlaceholder('No tickets are available right now.', 'The booking panel will update if more tickets become available.');
+    ticketPlaceholder('Refreshing ticket availability…', 'Just a moment while we check the latest allocation.');
+    try {
+      availabilityState = await fetchAvailability();
+      renderAvailability(availabilityState.currentWave);
+      if (availabilityState?.currentWave) createTitoWidget(availabilityState);
+      else ticketPlaceholder('No tickets are available right now.', 'The booking panel will update if more tickets become available.');
+
+      if (!availabilityTimer) {
+        availabilityTimer = window.setInterval(() => {
+          refreshAvailability({ allowWaveSwitch: !registrationInProgress });
+        }, 10000);
+      }
+    } catch (error) {
+      ticketPlaceholder('Ticket availability could not be refreshed.', error.message);
     }
     $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -554,10 +650,20 @@
 
     root.innerHTML = `
       <div class="post-purchase-card">
+        <div class="post-purchase-success" role="status">
+          <span class="post-purchase-success-mark" aria-hidden="true">✓</span>
+          <div>
+            <p class="kicker kicker-dark">Booking confirmed</p>
+            <h3>You're booked for Wotton Fireworks</h3>
+            <p>Booking <strong>${escapeHtml(snapshot.reference)}</strong> is complete. Your confirmation email contains all of your ticket QR codes.</p>
+            ${snapshot.receiptUrl ? `<p><a class="text-link" href="${escapeHtml(snapshot.receiptUrl)}" target="_blank" rel="noopener">View your receipt</a></p>` : ''}
+          </div>
+        </div>
+
         <div class="post-purchase-heading">
-          <p class="kicker kicker-dark">Booking complete</p>
-          <h3>Before you go, come and meet us</h3>
-          <p>Your fireworks booking <strong>${snapshot.reference}</strong> is complete. These choices are optional and save immediately against that booking.</p>
+          <p class="kicker kicker-dark">Before you go</p>
+          <h3>Two invitations and three quick choices</h3>
+          <p>These are optional and save immediately against booking <strong>${escapeHtml(snapshot.reference)}</strong>.</p>
         </div>
 
         <div class="post-purchase-invite">
@@ -629,7 +735,7 @@
         <div class="post-purchase-footer">
           <p>Your answers are stored with this fireworks booking. There is no extra form to submit.</p>
           <div class="post-purchase-footer-actions">
-            <a class="button button-dark" href="#visit">Plan your visit</a>
+            <a class="button button-dark" href="#visit" id="post-purchase-plan-visit">Plan your visit</a>
             <button type="button" class="button button-outline" id="post-purchase-book-more">Book more tickets</button>
           </div>
         </div>
@@ -641,40 +747,14 @@
         queuePostPurchaseChoice(button.dataset.stage, button.dataset.value);
       });
     });
+    $('#post-purchase-plan-visit', root)?.addEventListener('click', clearPendingPostPurchase);
     $('#post-purchase-book-more', root)?.addEventListener('click', showTicketSelectorAgain);
   }
 
   async function resetSelectorAfterFinishedCheckout() {
-    if (!finishedWidgetResetPending || finishedResetScheduled) return;
-
-    const overlayVisible = titoCheckoutOverlayVisible();
-    if (overlayVisible) {
-      finishedOverlaySeen = true;
-      return;
-    }
-
-    // Do not tear Tito down before its completed-order panel has actually been
-    // shown. In normal inline checkout we see the panel first, then reset when
-    // the customer dismisses it.
-    if (!finishedOverlaySeen) return;
-
-    finishedResetScheduled = true;
-    try {
-      const next = await fetchAvailability();
-      availabilityState = next;
-      renderAvailability(next.currentWave);
-      finishedWidgetResetPending = false;
-      finishedOverlaySeen = false;
-
-      const snapshot = postPurchaseSnapshot(finishedRegistration);
-      if (snapshot.slug && snapshot.reference) renderPostPurchaseFollowup(snapshot);
-      else createTitoWidget(next);
-    } catch (error) {
-      console.warn('WFD ticket selector reset failed:', error.message);
-      finishedResetScheduled = false;
-      return;
-    }
-    finishedResetScheduled = false;
+    // Retained as a no-op compatibility hook. V14 transitions immediately to the
+    // post-purchase panel from registration:finished instead of waiting for the
+    // customer to close Tito's confirmation overlay.
   }
 
   function ticketQuantityControls(mount) {
@@ -1235,9 +1315,9 @@
 
     visibleWaveKeys = [wave.key];
     setupTitoLifecycle();
-    // Keep the checkout overlay completely native while the ticket selector
-    // integration is being validated. Styling the modal can be reintroduced once
-    // the reservation-to-checkout handoff is confirmed stable.
+    // The body observer is passive: it only suppresses Tito's finished-order share
+    // row. It does not alter ticket quantities, checkout routing or payment state.
+    setupTitoUiObserver();
     ensureTitoScript(Boolean(state.testMode));
 
     const widget = document.createElement('tito-widget');
@@ -1286,6 +1366,15 @@
 
     storedAttribution = attribution();
     renderSourceSupport(storedAttribution);
+
+    const pendingFollowup = loadPendingPostPurchase();
+    if (pendingFollowup) {
+      renderPostPurchaseFollowup(pendingFollowup);
+      try { availabilityState = await fetchAvailability(); }
+      catch (error) { console.warn('WFD pending follow-up availability refresh failed:', error.message); }
+      return;
+    }
+
     ticketPlaceholder('Connecting the test ticket allocation…', 'This deploy preview is using the live page design with controlled test tickets.');
 
     try {

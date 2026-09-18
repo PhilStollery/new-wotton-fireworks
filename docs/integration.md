@@ -7,7 +7,8 @@ Tito remains the system of record for booking, payment, confirmation emails, att
 The website adds only the pieces Tito does not provide cleanly for this event:
 
 - shared price-band availability across several ticket types;
-- a clearer guard when a customer selects more tickets than remain at the current price;
+- a live price-band guard that prevents overselling the current price without freezing the page;
+- automatic reveal of the next price band when a customer tries to go beyond the remaining current-price allocation;
 - source tracking and beneficiary messaging for `/go/...` links;
 - later, controlled Super Saver to Advance to Standard price-band switching.
 
@@ -55,9 +56,22 @@ Tito Activities remain the hard capacity control. The reconciler never raises th
 
 1. Complete controlled test-mode purchases through the Deploy Preview.
 2. Verify shared Activity availability and the website quantity guard near the end of a test allocation.
-3. Test the Wave One to Wave Two handover.
-4. Fill the live Activity IDs and release slugs in `integration-config-2026.mjs`.
-5. Test production configuration without enabling price automation.
-6. Enable `priceAutomationEnabled` only after the transition logic has been proven.
+3. Try to exceed the remaining Wave One allocation. The current-price quantity should cap cleanly, the page must remain responsive, and Wave Two should appear for any additional tickets without adding higher-priced tickets automatically.
+4. Test the Wave One to Wave Two handover after Wave One is genuinely sold out.
+5. Fill the live Activity IDs and release slugs in `integration-config-2026.mjs`.
+6. Test production configuration without enabling price automation.
+7. Enable `priceAutomationEnabled` only after the transition logic has been proven.
 
 Tito's standard confirmation emails and Tito check-in app remain in use throughout.
+
+## Widget presentation
+
+The live availability strip now sits inside the ticket box immediately above the Tito ticket controls so it reads as part of the purchasing interface. Tito Widget V2 remains in inline mode, which Tito documents as the mode intended for CSS customisation. The site applies Wotton typography, form and dialog polish without replacing Tito checkout behaviour.
+
+The completed-order overlay normally includes a Tito event-homepage sharing row. Because the Wotton website is the public event page, the integration suppresses that row rather than advertising a second event URL. Tito receipt and individual ticket links remain untouched.
+
+## Quantity-limit behaviour
+
+The guard is deliberately not allowed to silently move tickets onto a higher price. If a customer tries to exceed the remaining quantity in the current band, the attempted control is capped back to the maximum still available, a prominent warning explains what happened, and the next price band is revealed in the same Tito selector for the customer to choose explicitly.
+
+If availability falls while somebody is already choosing tickets, for example because another customer completes an order, the current selection is not altered silently. Continue is temporarily blocked until the customer reviews and reduces the affected price band.

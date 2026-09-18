@@ -15,7 +15,11 @@ function activitySummary(wave, activity) {
   const releaseDetails = (activity?.releases || [])
     .map((release) => ({
       slug: release?.slug,
-      title: release?.title || release?.name || release?.slug || "Ticket"
+      title: release?.title || release?.name || release?.slug || "Ticket",
+      state: release?.state_name || release?.state || null,
+      offSale: Boolean(release?.off_sale),
+      soldOut: Boolean(release?.sold_out),
+      secret: Boolean(release?.secret)
     }))
     .filter((release) => release.slug);
   const releases = releaseDetails.map((release) => release.slug);

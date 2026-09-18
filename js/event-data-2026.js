@@ -6,19 +6,17 @@ window.FIREWORKS_EVENT = {
   placeShort: "Wotton-under-Edge, Gloucestershire",
   venueDisplay: "Wotton Community PARC, Wotton Road, Wotton-under-Edge, Gloucestershire GL12 8RB",
   entranceDisplay: "Wotton Community Sports Centre entrance, Wotton Road, GL12 8RB",
-  publicEmail: "wotton@roundtable.org.uk",
-  facebookUrl: "https://www.facebook.com/wottonrt",
+  publicEmail: "help@wotton-firework-display.co.uk",
+  facebookUrl: "https://www.facebook.com/wotton.fireworks",
   salesOpenDisplay: "Monday 21 September at 5pm",
 
   // Keep blank until a web-ready drone clip has been selected and compressed.
   // Recommended target: muted 8-15 second MP4, ideally under ~5 MB.
   heroVideo: "",
 
-  ticketMode: "preview", // preview | tickets
-  titoEvent: "",        // wotton-firework-display/2026 when created
-  titoTestMode: false,   // true only while running controlled Tito test-mode transactions
+  // Tito remains the booking, confirmation-email and gate check-in system.
+  // The website only adds availability/price-band handling and source attribution.
   defaultSource: "Direct",
-  postPurchaseEnabled: true, // server remains safely disabled until POST_PURCHASE_ENABLED=true in Netlify
 
   programme: [
     { time: "5:00pm", title: "Gates open", copy: "Food, stalls and the fairground open." },
@@ -118,8 +116,8 @@ window.FIREWORKS_EVENT = {
       a: "Children under 16 need to come with a responsible adult aged 18 or over. We keep the online booking flexible rather than forcing a particular mix of tickets into one basket. An 18-year-old sixth-form student can still use a Secondary & Sixth Form ticket and count as the accompanying adult."
     },
     {
-      q: "How will the QR code work for a group booking?",
-      a: "The booking confirmation is designed to give you one group QR for the order rather than separate customer emails for every person. If only part of the group arrives first, gate staff can check in those people and leave the remaining tickets available for later."
+      q: "How do tickets work for a group booking?",
+      a: "Your booking confirmation contains all the tickets and QR codes for your group in one email, so there is no need to assign each ticket to a different person or send everyone a separate email. Each ticket has its own QR code, which also means members of the group can arrive separately if necessary."
     },
     {
       q: "Is parking included with admission?",
@@ -139,7 +137,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "What happens if it rains?",
-      a: "Rain on its own is unlikely to stop the event. As long as the site remains safe and it is possible to launch the fireworks and light the bonfire safely, we will go ahead. If conditions do mean plans have to change, we will update this website and the Wotton Round Table Facebook page."
+      a: "Rain on its own is unlikely to stop the event. As long as the site remains safe and it is possible to launch the fireworks and light the bonfire safely, we will go ahead. If conditions do mean plans have to change, we will update this website and the Wotton Firework Display Facebook page."
     },
     {
       q: "Can I bring sparklers, my own fireworks, glass or alcohol?",
@@ -147,7 +145,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "What are the ground conditions and accessibility like?",
-      a: "The event is outdoors, with grass, slopes and some uneven or muddy ground possible in November, plus temporary lighting in places. We will make reasonable efforts to provide accessible arrangements. If you need specific access information, email wotton@roundtable.org.uk and we will help you plan your visit."
+      a: "The event is outdoors, with grass, slopes and some uneven or muddy ground possible in November, plus temporary lighting in places. We will make reasonable efforts to provide accessible arrangements. If you need specific access information, email help@wotton-firework-display.co.uk and we will help you plan your visit."
     },
     {
       q: "Can I transfer my booking or get a refund if I change my mind?",
@@ -155,15 +153,15 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "What happens if the event is cancelled?",
-      a: "If we have to cancel before the event and there is no replacement date, we will offer a refund for affected admission tickets and paid event parking. After booking, you will also have the option to tell us that you would rather we kept your ticket money as a donation. By the time a cancellation decision is made, a lot of the event cost has already been spent or committed, so donations help protect the following year's display. That choice is entirely optional, and we will remind you of what you selected before anything is finalised."
+      a: "If we have to cancel before the event and there is no replacement date, we will offer a refund for affected admission tickets and paid event parking. We will publish clear instructions on this website and contact purchasers using the booking details held in the ticketing system."
     },
     {
       q: "Where will weather or last-minute updates be posted?",
-      a: "This website is the main place to check. We will also post important announcements on the Wotton Round Table Facebook page."
+      a: "This website is the main place to check. We will also post important announcements on the Wotton Firework Display Facebook page."
     },
     {
       q: "How do I contact the organisers?",
-      a: "Email wotton@roundtable.org.uk. The display is organised by Wotton-under-Edge & District Round Table 974, Registered Charity No. 1080029."
+      a: "Email help@wotton-firework-display.co.uk. The display is organised by Wotton-under-Edge & District Round Table 974, Registered Charity No. 1080029."
     }
   ]
 };

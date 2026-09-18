@@ -286,24 +286,10 @@
       }
     });
 
-    window.tito('on:registration:finished', async (registration) => {
+    window.tito('on:registration:finished', () => {
       registrationInProgress = false;
       clearSelectionWarning();
       window.setTimeout(() => refreshAvailability({ allowWaveSwitch: true }), 800);
-
-      if (!data.postPurchaseEnabled || !registration?.slug) return;
-      try {
-        const response = await fetch('/api/order-session', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ registrationSlug: registration.slug, reference: registration.reference })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok || !result.url) throw new Error(result.error || 'Post-purchase handover unavailable');
-        window.location.assign(result.url);
-      } catch (error) {
-        console.warn('WFD post-purchase handover skipped:', error.message);
-      }
     });
   }
 
@@ -416,7 +402,7 @@
     }
 
     if (!Array.isArray(wave.releases) || !wave.releases.length) {
-      ticketPlaceholder('Test tickets are not configured yet.', 'Add the Wave release slugs in the Netlify deploy-preview environment variables.');
+      ticketPlaceholder('Test tickets are not configured yet.', 'Check the test Activity names in integration-config-2026.mjs.');
       return;
     }
 

@@ -191,33 +191,58 @@ tito-widget input[type="submit"] {
   }
 }
 
-/* v5: make live availability read as part of the ticket selector rather than a
-   separate information panel. */
-.ticket-box > .ticket-availability,
-.ticket-box > .ticket-selection-warning,
-#tito-mount {
+/* v6: availability, warning and the Tito selector are one visual control. */
+.ticket-box {
+  background: white !important;
+}
+
+.ticket-selector-shell {
   width: min(100%, 780px);
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
 }
 
-.ticket-box > .ticket-availability {
-  margin-bottom: 8px;
-  padding: 11px 15px;
-  border-radius: 10px 10px 6px 6px;
+.ticket-selector-shell > .ticket-availability {
+  width: 100%;
+  margin: 0;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 1px solid #DED7C8;
+  border-radius: 0;
+  background: #F6F0E2;
+  color: var(--grey);
   box-shadow: none;
 }
 
-.ticket-box > .ticket-selection-warning {
-  margin-top: 0;
-  margin-bottom: 8px;
-  padding: 13px 15px;
-  border-radius: 8px;
+.ticket-selector-shell > .ticket-availability strong {
+  color: #8B6217;
+  font-size: 1rem;
+}
+
+.ticket-selector-shell > .ticket-availability span {
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.ticket-selector-shell > .ticket-selection-warning {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid #E8AAA3;
+  border-radius: 0;
+  background: #FFF4F2;
   box-shadow: none;
 }
 
 #tito-mount {
-  margin-top: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Open Sans", Arial, sans-serif;
 }
 
 #tito-mount tito-widget {
@@ -303,8 +328,18 @@ tito-widget input[type="submit"] {
 }
 
 @media (max-width: 650px) {
-  .ticket-box > .ticket-availability {
+  .ticket-selector-shell > .ticket-availability {
+    display: grid;
+    gap: 2px;
     padding: 10px 12px;
+  }
+
+  .ticket-selector-shell > .ticket-availability span {
+    text-align: left;
+  }
+
+  .ticket-selector-shell > .ticket-selection-warning {
+    padding: 11px 12px;
   }
 
   .wfd-tito-dialog {

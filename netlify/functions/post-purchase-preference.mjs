@@ -21,10 +21,20 @@ export default async (request) => {
   if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
 
   try {
-    const { registrationSlug, reference, stage, value } = await readJson(request);
+    const { registrationSlug, reference, stage, value, answers } = await readJson(request);
 
     if (!registrationSlug) throw new HttpError(400, "Booking details are missing");
-    if (!allowed[stage]?.has(value)) throw new HttpError(400, "Invalid preference choice");
+
+    const updates = answers && typeof answers === "object" && !Array.isArray(answers)
+      ? Object.entries(answers)
+      : [[stage, value]];
+
+    if (!updates.length || updates.length > Object.keys(allowed).length) {
+      throw new HttpError(400, "Invalid preference choices");
+    }
+    for (const [nextStage, nextValue] of updates) {
+      if (!allowed[nextStage]?.has(nextValue)) throw new HttpError(400, "Invalid preference choice");
+    }
 
     const registration = await getRegistration(String(registrationSlug));
     if (!registration) throw new HttpError(404, "Booking not found");
@@ -41,19 +51,24 @@ export default async (request) => {
       : {};
 
     const now = new Date().toISOString();
-    preferences[stage] = {
-      value,
-      recorded_at: now,
-      wording_version: WORDING_VERSION
-    };
+    for (const [nextStage, nextValue] of updates) {
+      preferences[nextStage] = {
+        value: nextValue,
+        recorded_at: now,
+        wording_version: WORDING_VERSION
+      };
+    }
 
     await updateRegistrationMetadata(registration.slug, {
       wfd_preferences: preferences,
       wfd_preferences_updated_at: now,
       wfd_preferences_source: "website_post_checkout"
-    });
+    }, undefined, registration);
 
-    return json({ ok: true, stage, value });
+    return json({
+      ok: true,
+      saved: Object.fromEntries(updates)
+    });
   } catch (error) {
     return toErrorResponse(error);
   }

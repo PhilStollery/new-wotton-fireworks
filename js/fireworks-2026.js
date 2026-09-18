@@ -85,7 +85,10 @@
   let postPurchaseRegistration = null;
   let postPurchaseAnswers = {};
   let postPurchaseError = '';
-  let postPurchaseSaveQueue = Promise.resolve();
+  let postPurchaseSaveTimer = null;
+  let postPurchaseSaveInFlight = false;
+  let postPurchasePendingAnswers = {};
+  let postPurchaseSaveStates = {};
   let postPurchaseModalOverlay = null;
 
   function fillSharedFields() {
@@ -383,6 +386,12 @@
       finishedWidgetResetPending = false;
       finishedOverlaySeen = false;
       postPurchaseAnswers = {};
+      postPurchaseSaveStates = {};
+      postPurchasePendingAnswers = {};
+      if (postPurchaseSaveTimer) {
+        window.clearTimeout(postPurchaseSaveTimer);
+        postPurchaseSaveTimer = null;
+      }
       postPurchaseError = '';
       clearTitoCheckoutRoute();
 
@@ -588,6 +597,10 @@
     const selected = postPurchaseAnswers[stage] || '';
     const positiveSelected = selected === positiveValue;
     const negativeSelected = selected === negativeValue;
+    const saveState = postPurchaseSaveStates[stage] || (selected ? 'saved' : '');
+    const statusText = saveState === 'saving' ? 'Saving…'
+      : saveState === 'error' ? 'Not saved'
+      : selected ? 'Saved' : '';
 
     return `
       <section class="post-purchase-choice-card" data-post-stage="${stage}">
@@ -596,7 +609,7 @@
         <div class="post-purchase-choice-actions">
           <button type="button" class="post-purchase-choice${positiveSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${positiveValue}" aria-pressed="${positiveSelected ? 'true' : 'false'}">${positiveLabel}</button>
           <button type="button" class="post-purchase-choice post-purchase-choice-secondary${negativeSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${negativeValue}" aria-pressed="${negativeSelected ? 'true' : 'false'}">${negativeLabel}</button>
-          <span class="post-purchase-saved" aria-live="polite">${selected ? 'Saved' : ''}</span>
+          <span class="post-purchase-saved" data-post-save-state="${stage}" aria-live="polite">${statusText}</span>
         </div>
       </section>
     `;
@@ -664,18 +677,39 @@
     catch { /* optional storage */ }
   }
 
-  async function savePostPurchaseChoice(stage, value) {
+  function updatePostPurchaseChoiceUi(stage) {
+    const root = postPurchaseModalOverlay || document;
+    const card = $(`[data-post-stage="${CSS.escape(stage)}"]`, root);
+    if (!card) return;
+
+    const selected = postPurchaseAnswers[stage] || '';
+    $$('[data-post-choice]', card).forEach((button) => {
+      const isSelected = button.dataset.value === selected;
+      button.classList.toggle('is-selected', isSelected);
+      button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    });
+
+    const status = $(`[data-post-save-state="${CSS.escape(stage)}"]`, card);
+    if (status) {
+      const saveState = postPurchaseSaveStates[stage] || (selected ? 'saved' : '');
+      status.textContent = saveState === 'saving' ? 'Saving…'
+        : saveState === 'error' ? 'Not saved'
+        : selected ? 'Saved' : '';
+    }
+  }
+
+  async function savePostPurchaseAnswers(answers) {
     const snapshot = postPurchaseRegistration;
     if (!snapshot?.slug) throw new Error('Booking details are not available.');
 
     const response = await fetch(POST_PURCHASE_API, {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         registrationSlug: snapshot.slug,
         reference: snapshot.reference,
-        stage,
-        value
+        answers
       })
     });
     const result = await response.json().catch(() => ({}));
@@ -683,20 +717,55 @@
     return result;
   }
 
+  async function flushPostPurchaseChoices() {
+    if (postPurchaseSaveInFlight) return;
+    const entries = Object.entries(postPurchasePendingAnswers);
+    if (!entries.length) return;
+
+    postPurchasePendingAnswers = {};
+    postPurchaseSaveInFlight = true;
+    const batch = Object.fromEntries(entries);
+
+    try {
+      await savePostPurchaseAnswers(batch);
+      Object.entries(batch).forEach(([stage, value]) => {
+        if (postPurchaseAnswers[stage] === value) {
+          postPurchaseSaveStates[stage] = 'saved';
+          updatePostPurchaseChoiceUi(stage);
+        }
+      });
+      postPurchaseError = '';
+    } catch (error) {
+      Object.entries(batch).forEach(([stage, value]) => {
+        if (postPurchaseAnswers[stage] === value) {
+          postPurchaseSaveStates[stage] = 'error';
+          updatePostPurchaseChoiceUi(stage);
+        } else {
+          postPurchasePendingAnswers[stage] = postPurchaseAnswers[stage];
+        }
+      });
+      postPurchaseError = error.message || 'We could not save one or more choices. Please try again.';
+    } finally {
+      postPurchaseSaveInFlight = false;
+      if (Object.keys(postPurchasePendingAnswers).length) {
+        window.setTimeout(() => flushPostPurchaseChoices(), 0);
+      }
+    }
+  }
+
   function queuePostPurchaseChoice(stage, value) {
     postPurchaseError = '';
-    const task = postPurchaseSaveQueue.then(() => savePostPurchaseChoice(stage, value));
-    postPurchaseSaveQueue = task.catch(() => {});
+    postPurchaseAnswers[stage] = value;
+    postPurchaseSaveStates[stage] = 'saving';
+    postPurchasePendingAnswers[stage] = value;
+    rememberPostPurchase(postPurchaseRegistration);
+    updatePostPurchaseChoiceUi(stage);
 
-    task.then(() => {
-      postPurchaseAnswers[stage] = value;
-      postPurchaseError = '';
-      rememberPostPurchase(postPurchaseRegistration);
-      renderPostPurchaseFollowup(postPurchaseRegistration);
-    }).catch((error) => {
-      postPurchaseError = error.message || 'We could not save that choice. Please try again.';
-      renderPostPurchaseFollowup(postPurchaseRegistration);
-    });
+    if (postPurchaseSaveTimer) window.clearTimeout(postPurchaseSaveTimer);
+    postPurchaseSaveTimer = window.setTimeout(() => {
+      postPurchaseSaveTimer = null;
+      flushPostPurchaseChoices();
+    }, 160);
   }
 
   async function resetAfterPostPurchase({ scrollToTickets = false } = {}) {
@@ -704,6 +773,13 @@
     disposeFinishedTitoOverlay();
     finishedRegistration = null;
     postPurchaseRegistration = null;
+    postPurchaseAnswers = {};
+    postPurchaseSaveStates = {};
+    postPurchasePendingAnswers = {};
+    if (postPurchaseSaveTimer) {
+      window.clearTimeout(postPurchaseSaveTimer);
+      postPurchaseSaveTimer = null;
+    }
     setPostPurchaseMode(false);
 
     ticketPlaceholder('Refreshing ticket availability…', 'Just a moment while we check the latest allocation.');
@@ -1515,6 +1591,14 @@
     video.load();
     video.play().catch(() => {});
   }
+
+  window.addEventListener('pagehide', () => {
+    if (postPurchaseSaveTimer) {
+      window.clearTimeout(postPurchaseSaveTimer);
+      postPurchaseSaveTimer = null;
+    }
+    if (Object.keys(postPurchasePendingAnswers).length) flushPostPurchaseChoices();
+  });
 
   fillSharedFields();
   renderHighlights();

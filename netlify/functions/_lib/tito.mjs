@@ -35,8 +35,8 @@ export async function getRegistration(slug, eventSlug) {
   return body?.registration;
 }
 
-export async function updateRegistrationMetadata(slug, nextMetadata, eventSlug) {
-  const registration = await getRegistration(slug, eventSlug);
+export async function updateRegistrationMetadata(slug, nextMetadata, eventSlug, currentRegistration = null) {
+  const registration = currentRegistration || await getRegistration(slug, eventSlug);
   const metadata = { ...(registration?.metadata || {}), ...nextMetadata };
   const body = await titoRequest(`${eventBase(eventSlug)}/registrations/${encodeURIComponent(slug)}`, {
     method: "PATCH",

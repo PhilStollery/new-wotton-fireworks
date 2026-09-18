@@ -1,0 +1,17 @@
+export const MANIFEST_2026 = Object.freeze({
+  eventName: "Wotton-under-Edge Firework Display 2026",
+  timezone: "Europe/London",
+  venue: "Wotton Community PARC, Wotton Road, Wotton-under-Edge, Gloucestershire GL12 8RB",
+  publicEmail: "help@wotton-firework-display.co.uk",
+  charityNumber: "1080029",
+  eventCapacity: 3500,
+  parkingCapacity: 150,
+  generalParkingCapacity: 120,
+  blueBadgeReserve: 30,
+  superSaverCapacity: 300,
+  advanceCapacity: 700,
+  salesOpenLocal: "2026-09-21T17:00:00",
+  superSaverCutoffLocal: "2026-10-05T17:00:00",
+  advanceCutoffLocal: "2026-10-26T17:00:00",
+  admissionCloseLocal: "2026-11-07T19:30:00"
+});

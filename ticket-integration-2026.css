@@ -1,0 +1,396 @@
+/* Ticket integration additions for the 2026 development branch. */
+.source-support-card,
+.ticket-availability,
+.ticket-selection-warning {
+  margin: 0 0 16px;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.source-support-card[hidden],
+.ticket-availability[hidden],
+.ticket-selection-warning[hidden] {
+  display: none !important;
+}
+
+.source-support-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  background: #FFF3D7;
+  color: var(--grey);
+  border: 2px solid var(--yellow);
+}
+
+.source-support-card .support-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--grey);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.source-support-card strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.source-support-card p {
+  margin-top: 5px;
+  color: #5D5547;
+}
+
+.ticket-availability {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  background: #292925;
+  border: 1px solid #4A4A43;
+  color: white;
+}
+
+.ticket-availability strong {
+  color: var(--yellow);
+  font-size: 1.12rem;
+}
+
+.ticket-availability span {
+  color: rgba(255,255,255,.72);
+  font-size: .9rem;
+  text-align: right;
+}
+
+.ticket-selection-warning {
+  background: #FFF4F2;
+  color: #5E221E;
+  border: 2px solid #C65A4D;
+  box-shadow: 0 10px 26px rgba(0,0,0,.12);
+}
+
+.ticket-selection-warning strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.ticket-selection-warning p {
+  margin-top: 4px;
+}
+
+.ticket-box.is-loading #tito-mount {
+  min-height: 120px;
+}
+
+.ticket-integration-state {
+  text-align: center;
+  padding: 26px 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.ticket-integration-state strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+.ticket-integration-state p {
+  color: var(--muted);
+}
+
+/* Tito Widget v2 inline exposes ordinary HTML, so inherit the event typography. */
+tito-widget,
+#tito-mount {
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+tito-widget input,
+tito-widget select,
+tito-widget button,
+tito-widget textarea {
+  font: inherit;
+}
+
+tito-widget button,
+tito-widget input[type="submit"] {
+  border-radius: 999px;
+}
+
+@media (max-width: 650px) {
+  .source-support-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-availability {
+    display: grid;
+    gap: 4px;
+  }
+
+  .ticket-availability span {
+    text-align: left;
+  }
+}
+
+/* Venue map restored for the 2026 event guide. */
+.venue-map-card {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  gap: 0;
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.07);
+}
+
+.venue-map-copy {
+  padding: clamp(24px, 4vw, 34px);
+}
+
+.venue-map-copy h3 {
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+}
+
+.venue-map-copy p:not(.kicker) {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.venue-map-frame {
+  min-height: 330px;
+  background: #e8e5dc;
+}
+
+.venue-map-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 330px;
+  border: 0;
+}
+
+.contact a:not(.button),
+.faq-list a {
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .venue-map-card {
+    grid-template-columns: 1fr;
+  }
+
+  .venue-map-frame,
+  .venue-map-frame iframe {
+    min-height: 280px;
+  }
+}
+
+/* v6: availability, warning and the Tito selector are one visual control. */
+.ticket-box {
+  background: white !important;
+}
+
+.ticket-selector-shell {
+  width: min(100%, 780px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ticket-selector-shell > .ticket-availability {
+  width: 100%;
+  margin: 0;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 1px solid #DED7C8;
+  border-radius: 0;
+  background: #F6F0E2;
+  color: var(--grey);
+  box-shadow: none;
+}
+
+.ticket-selector-shell > .ticket-availability strong {
+  color: #8B6217;
+  font-size: 1rem;
+}
+
+.ticket-selector-shell > .ticket-availability span {
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.ticket-selector-shell > .ticket-selection-warning {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid #E8AAA3;
+  border-radius: 0;
+  background: #FFF4F2;
+  box-shadow: none;
+}
+
+#tito-mount {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+#tito-mount tito-widget {
+  display: block;
+  width: 100%;
+  margin: 0 !important;
+  color: var(--grey);
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+/* Tito Widget V2 is deliberately loaded inline, so its ordinary HTML can be
+   blended into the event site without replacing Tito's checkout behaviour. */
+#tito-mount tito-widget form,
+#tito-mount tito-widget form > div,
+#tito-mount tito-widget > div {
+  margin-top: 0 !important;
+}
+
+#tito-mount tito-widget input[type="number"],
+#tito-mount tito-widget select {
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--grey) !important;
+  font-weight: 700 !important;
+}
+
+#tito-mount tito-widget button,
+#tito-mount tito-widget input[type="submit"] {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+}
+
+#tito-mount tito-widget button:not(:disabled),
+#tito-mount tito-widget input[type="submit"]:not(:disabled) {
+  border-color: var(--grey) !important;
+}
+
+#tito-mount tito-widget button[type="submit"],
+#tito-mount tito-widget input[type="submit"],
+#tito-mount tito-widget button:last-of-type {
+  background: var(--grey) !important;
+  color: #fff !important;
+}
+
+#tito-mount tito-widget button:focus-visible,
+#tito-mount tito-widget input:focus-visible,
+#tito-mount tito-widget select:focus-visible {
+  outline: 3px solid var(--yellow) !important;
+  outline-offset: 2px;
+}
+
+/* First-pass checkout overlay treatment. The JS marks Tito's injected dialog so
+   we can style it without depending on Tito's private class names. */
+.wfd-tito-overlay {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  backdrop-filter: blur(2px);
+}
+
+.wfd-tito-dialog {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.28) !important;
+}
+
+.wfd-tito-dialog a {
+  color: #7a5514 !important;
+  text-underline-offset: 2px;
+}
+
+.wfd-tito-dialog button,
+.wfd-tito-dialog input,
+.wfd-tito-dialog select,
+.wfd-tito-dialog textarea {
+  font-family: "Open Sans", Arial, sans-serif !important;
+}
+
+.wfd-tito-share-row,
+.wfd-tito-share-row[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 650px) {
+  .ticket-selector-shell > .ticket-availability {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+  }
+
+  .ticket-selector-shell > .ticket-availability span {
+    text-align: left;
+  }
+
+  .ticket-selector-shell > .ticket-selection-warning {
+    padding: 11px 12px;
+  }
+
+  .wfd-tito-dialog {
+    border-radius: 14px 14px 0 0 !important;
+  }
+}
+
+/* v7: later price bands are mounted from the outset so Tito keeps one stable
+   cart state. We reveal/hide only the individual release rows. */
+#tito-mount .wfd-release-row[hidden] {
+  display: none !important;
+}
+
+#tito-mount .wfd-release-row[data-wfd-wave="wave-2"]:not([hidden]) {
+  animation: wfd-wave-reveal .16s ease-out;
+}
+
+@keyframes wfd-wave-reveal {
+  from { opacity: .35; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* v8: visually mark Continue as unavailable without changing Tito's own
+   disabled state or touching its internal cart controls. */
+#tito-mount .wfd-capacity-blocked {
+  opacity: .55 !important;
+  cursor: not-allowed !important;
+}
+
+/* v9: the availability counter is live against the quantities currently
+   selected in the browser. The Admin API supplies the starting allocation;
+   selecting tickets subtracts from that number immediately. */
+.ticket-selector-shell > .ticket-availability.is-empty {
+  background: #FFF3D7;
+}
+
+.ticket-selector-shell > .ticket-availability.is-empty strong {
+  color: #6D4A0B;
+}
+
+.ticket-selector-shell > .ticket-availability.is-over {
+  background: #FFF4F2;
+  border-bottom-color: #E8AAA3;
+}
+
+.ticket-selector-shell > .ticket-availability.is-over strong {
+  color: #8A3028;
+}
+
+#tito-mount input[type="number"][data-wfd-shared-max]:out-of-range {
+  border-color: #C65A4D !important;
+  box-shadow: 0 0 0 2px rgba(198,90,77,.14) !important;
+}

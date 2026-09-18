@@ -11,6 +11,7 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 
 # Netlify function routes
 /api/integration-health /.netlify/functions/integration-health 200
+/api/ticket-availability /.netlify/functions/ticket-availability 200
 /api/tito-webhook /.netlify/functions/tito-webhook 200
 /api/order-session /.netlify/functions/order-session 200
 /api/order-view /.netlify/functions/order-view 200
@@ -21,20 +22,22 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 /api/gate-search /.netlify/functions/gate-search 200
 /api/meet-and-greet /.netlify/functions/meet-and-greet-book 200
 
-# Historic Tito source codes retained for year-on-year comparison
-/go/bluecoat /?source=BlueCoat&utm_source=bluecoat_pta&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/british /?source=British&utm_source=british_school_pta&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/charfield /?source=Charfield&utm_source=charfield_school&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/hockey /?source=Hockey&utm_source=wotton_hockey&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/kingswood /?source=Kingswood&utm_source=kingswood_primary&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/klb /?source=KLB&utm_source=klb_friends&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/nibley /?source=Nibley&utm_source=north_nibley_school&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/rovers /?source=Rovers&utm_source=wotton_rovers&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/rugby /?source=Rugby&utm_source=wotton_rugby&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/wd /?source=WD&utm_source=wotton_directory&utm_medium=qr&utm_campaign=fireworks_2026 302
-/go/gate /?source=Gate&utm_source=gate&utm_medium=assisted_online&utm_campaign=fireworks_2026 302
+# Friendly source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
+/go/bluecoat /index.html 200
+/go/british /index.html 200
+/go/charfield /index.html 200
+/go/kingswood /index.html 200
+/go/north-nibley /index.html 200
+/go/nibley /index.html 200
+/go/hockey /index.html 200
+/go/rovers /index.html 200
+/go/rugby /index.html 200
 
-# General campaign routes use the historic Direct source while UTMs preserve detail
-/go/poster /?source=Direct&utm_source=poster&utm_medium=qr&utm_campaign=fireworks_2026&utm_content=general 302
-/go/flyer /?source=Direct&utm_source=flyer&utm_medium=qr&utm_campaign=fireworks_2026&utm_content=general 302
-/go/facebook-launch /?source=Direct&utm_source=facebook&utm_medium=organic_social&utm_campaign=fireworks_2026&utm_content=launch 302
+# Other source tracks are retained for marketing analytics, but do not show a beneficiary message.
+/go/klb /index.html 200
+/go/wd /index.html 200
+/go/gate /index.html 200
+/go/poster /index.html 200
+/go/flyer /index.html 200
+/go/facebook /index.html 200
+/go/facebook-launch /index.html 200

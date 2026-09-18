@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="/">
   <title>Wotton-under-Edge Firework Display 2026</title>
   <meta name="description" content="Wotton-under-Edge Firework Display, Saturday 7 November 2026. Two firework displays, bonfire, live entertainment, fairground, food and stalls in Gloucestershire.">
   <link rel="canonical" href="https://wotton-firework-display.co.uk/">
@@ -22,6 +23,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/fireworks-2026.css">
+  <link rel="stylesheet" href="css/ticket-integration-2026.css">
 
   <script type="application/ld+json">
   {
@@ -75,7 +77,7 @@
         <source id="hero-video-source" type="video/mp4">
       </video>
       <div class="hero-overlay"></div>
-            <div class="wrap hero-inner">
+      <div class="wrap hero-inner">
         <p class="kicker"><span data-event-field="dateDisplay">Saturday 7 November 2026</span></p>
         <h1 id="event-title">Wotton-under-Edge<br>Firework Display</h1>
         <p class="hero-location" data-event-field="placeDisplay">Wotton-under-Edge, Gloucestershire (GL12)</p>
@@ -110,7 +112,7 @@
         <div class="experience-layout">
           <figure class="experience-photo">
             <img src="images/2026/bonfire.jpg" alt="Bonfire at a previous Wotton-under-Edge Firework Display" loading="lazy">
-                        <figcaption>Bonfire, fireworks and a full evening of entertainment.</figcaption>
+            <figcaption>Bonfire, fireworks and a full evening of entertainment.</figcaption>
           </figure>
 
           <div class="programme-panel">
@@ -143,6 +145,10 @@
           <p>If you need parking, select it with your admission booking. Everyone enters through the Wotton Community Sports Centre entrance.</p>
         </div>
         <div id="travel-choices" class="travel-strip" aria-label="Travel options"></div>
+
+        <div id="source-support" class="source-support-card" hidden aria-live="polite"></div>
+        <div id="ticket-availability" class="ticket-availability" hidden aria-live="polite"></div>
+        <div id="ticket-selection-warning" class="ticket-selection-warning" hidden role="alert" aria-live="assertive"></div>
 
         <div class="ticket-box">
           <div id="tito-mount"></div>

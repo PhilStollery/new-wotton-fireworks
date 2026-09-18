@@ -53,6 +53,13 @@ All attendees use the Wotton Community Sports Centre entrance on Wotton Road, wh
 See `docs/integration.md`.
 
 
-## V6 ticket boundary behaviour
+## V9 ticket boundary behaviour
 
-The live availability strip, allocation warning and Tito widget are wrapped in a single `ticket-selector-shell`, so the availability count visually belongs to the selector. The quantity guard checks Tito's plus/minus button clicks immediately rather than waiting for the 10-second availability poll. If a customer selects more current-price tickets than remain, Continue is blocked, the next price band is revealed in the same widget, and the customer must explicitly reduce the current-price quantity before proceeding. No quantity or price is silently changed.
+Tito's own event page has been tested with mixed Wave One and Wave Two orders and behaves correctly. The website therefore treats Tito as the authoritative checkout/capacity system and only adds a clearer front-end guard. All price bands are mounted once in a single Tito widget. Later bands are hidden visually until needed, without rebuilding the widget or writing quantities back into Tito.
+
+If a customer exceeds the remaining allocation for the current price band, the site reveals the next band and intercepts Continue until the current-band quantity is reduced. It does not silently move tickets to a higher price. Tito's Activity capacity remains the final backstop for concurrent buyers.
+
+
+## V9 shared-capacity UX
+
+The availability number shown above the embedded selector is a live client-side counter. The server supplies the starting Activity availability, then the browser subtracts the quantities selected in that price band immediately. The quantity inputs are given dynamic HTML `max` values so all ticket types within one Activity share the same remaining allocation. Reaching zero reveals the next price band while keeping the same Tito widget mounted. Tito remains the final capacity authority at checkout.

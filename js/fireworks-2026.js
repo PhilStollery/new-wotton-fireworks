@@ -7,6 +7,8 @@
 
   const ATTRIBUTION_KEY = 'wottonFireworksAttribution2026';
   const ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+  const POST_PURCHASE_API = '/api/post-purchase-preference';
+
 
   const sourceTracks = {
     bluecoat: {
@@ -74,6 +76,14 @@
   let titoUiObserver = null;
   let titoUiScheduled = false;
   let stickySelectionWarning = false;
+  let finishedWidgetResetPending = false;
+  let finishedRegistration = null;
+  let finishedOverlaySeen = false;
+  let finishedResetScheduled = false;
+  let postPurchaseRegistration = null;
+  let postPurchaseAnswers = {};
+  let postPurchaseError = '';
+  let postPurchaseSaveQueue = Promise.resolve();
 
   function fillSharedFields() {
     const values = {
@@ -348,7 +358,10 @@
 
   function setupTitoUiObserver() {
     if (titoUiObserver) return;
-    titoUiObserver = new MutationObserver(scheduleTitoUiMark);
+    titoUiObserver = new MutationObserver(() => {
+      scheduleTitoUiMark();
+      window.requestAnimationFrame(() => resetSelectorAfterFinishedCheckout());
+    });
     titoUiObserver.observe(document.body, { childList: true, subtree: true });
     scheduleTitoUiMark();
   }
@@ -373,14 +386,37 @@
       }
     });
 
-    window.tito('on:registration:finished', () => {
+    window.tito('on:registration:finished', (registration) => {
       registrationInProgress = false;
       stickySelectionWarning = false;
       clearSelectionWarning();
-      // Tito keeps its own checkout route in the ?tito= parameter until the
-      // overlay is dismissed. The selector guard stays hands-off while that
-      // route exists, then resumes automatically on the next selector update.
-      window.setTimeout(() => refreshAvailability({ allowWaveSwitch: true }), 800);
+
+      // registration:finished is Tito's confirmed-order callback. Keep the
+      // completed-order panel visible, but remove Tito's private checkout route
+      // from our public URL immediately. Once the customer dismisses the panel,
+      // reset the selector with fresh availability so another booking can start.
+      finishedRegistration = registration || null;
+      finishedWidgetResetPending = true;
+      finishedOverlaySeen = titoCheckoutOverlayVisible();
+      postPurchaseAnswers = {};
+      postPurchaseError = '';
+      clearTitoCheckoutRoute();
+
+      try {
+        const snapshot = {
+          slug: registration?.slug || '',
+          reference: registration?.reference || ''
+        };
+        if (snapshot.slug) sessionStorage.setItem('wfdFinishedRegistration2026', JSON.stringify(snapshot));
+      } catch {
+        // Session storage is optional.
+      }
+
+      // Clean integration point for the forthcoming post-checkout questions.
+      // The event contains Tito's full finished-registration payload but does not
+      // alter Tito's own confirmation email or ticket delivery.
+      window.dispatchEvent(new CustomEvent('wfd:registration-finished', { detail: finishedRegistration }));
+      window.requestAnimationFrame(() => resetSelectorAfterFinishedCheckout());
     });
   }
 
@@ -400,6 +436,245 @@
     } catch {
       return false;
     }
+  }
+
+  function clearTitoCheckoutRoute() {
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('tito')) return;
+      url.searchParams.delete('tito');
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, '', next);
+    } catch {
+      // A failed cosmetic URL cleanup must never interfere with a completed order.
+    }
+  }
+
+  function titoCheckoutOverlayVisible() {
+    const candidates = [
+      ...$$('.wfd-tito-dialog'),
+      ...$$('[role="dialog"]').filter((dialog) => String(dialog.textContent || '').includes(data.eventName)),
+      ...$$('body > div').filter((candidate) => {
+        if (!String(candidate.textContent || '').includes(data.eventName)) return false;
+        try { return window.getComputedStyle(candidate).position === 'fixed'; }
+        catch { return false; }
+      })
+    ];
+    return [...new Set(candidates)].some(isVisible);
+  }
+
+  function setPostPurchaseMode(active) {
+    const shell = $('.ticket-selector-shell');
+    const root = $('#post-purchase-followup');
+    const ticketBox = $('.ticket-box');
+    if (shell) shell.hidden = Boolean(active);
+    if (root) root.hidden = !active;
+    ticketBox?.classList.toggle('showing-post-purchase', Boolean(active));
+  }
+
+  function postChoice(stage, title, body, positiveLabel, positiveValue, negativeLabel, negativeValue) {
+    const selected = postPurchaseAnswers[stage] || '';
+    const positiveSelected = selected === positiveValue;
+    const negativeSelected = selected === negativeValue;
+
+    return `
+      <section class="post-purchase-choice-card" data-post-stage="${stage}">
+        <h4>${title}</h4>
+        <p>${body}</p>
+        <div class="post-purchase-choice-actions">
+          <button type="button" class="post-purchase-choice${positiveSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${positiveValue}" aria-pressed="${positiveSelected ? 'true' : 'false'}">${positiveLabel}</button>
+          <button type="button" class="post-purchase-choice post-purchase-choice-secondary${negativeSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${negativeValue}" aria-pressed="${negativeSelected ? 'true' : 'false'}">${negativeLabel}</button>
+          <span class="post-purchase-saved" aria-live="polite">${selected ? 'Saved' : ''}</span>
+        </div>
+      </section>
+    `;
+  }
+
+  function postPurchaseSnapshot(registration = finishedRegistration) {
+    return {
+      slug: String(registration?.slug || ''),
+      reference: String(registration?.reference || '')
+    };
+  }
+
+  async function savePostPurchaseChoice(stage, value) {
+    const snapshot = postPurchaseRegistration;
+    if (!snapshot?.slug || !snapshot?.reference) throw new Error('Booking details are not available.');
+
+    const response = await fetch(POST_PURCHASE_API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        registrationSlug: snapshot.slug,
+        reference: snapshot.reference,
+        stage,
+        value
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || 'We could not save that choice.');
+    return result;
+  }
+
+  function queuePostPurchaseChoice(stage, value) {
+    postPurchaseError = '';
+    const task = postPurchaseSaveQueue.then(() => savePostPurchaseChoice(stage, value));
+    postPurchaseSaveQueue = task.catch(() => {});
+
+    task.then(() => {
+      postPurchaseAnswers[stage] = value;
+      postPurchaseError = '';
+      renderPostPurchaseFollowup(postPurchaseRegistration);
+    }).catch((error) => {
+      postPurchaseError = error.message || 'We could not save that choice. Please try again.';
+      renderPostPurchaseFollowup(postPurchaseRegistration);
+    });
+  }
+
+  function showTicketSelectorAgain() {
+    setPostPurchaseMode(false);
+    if (availabilityState?.currentWave) {
+      createTitoWidget(availabilityState);
+    } else {
+      ticketPlaceholder('No tickets are available right now.', 'The booking panel will update if more tickets become available.');
+    }
+    $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderPostPurchaseFollowup(snapshot) {
+    const root = $('#post-purchase-followup');
+    if (!root || !snapshot?.slug || !snapshot?.reference) {
+      setPostPurchaseMode(false);
+      if (availabilityState?.currentWave) createTitoWidget(availabilityState);
+      return;
+    }
+
+    postPurchaseRegistration = snapshot;
+    setPostPurchaseMode(true);
+
+    root.innerHTML = `
+      <div class="post-purchase-card">
+        <div class="post-purchase-heading">
+          <p class="kicker kicker-dark">Booking complete</p>
+          <h3>Before you go, come and meet us</h3>
+          <p>Your fireworks booking <strong>${snapshot.reference}</strong> is complete. These choices are optional and save immediately against that booking.</p>
+        </div>
+
+        <div class="post-purchase-invite">
+          <div class="post-purchase-invite-copy">
+            <span class="post-purchase-eyebrow">Round Table is more than fireworks</span>
+            <h4>Fancy seeing what we actually get up to?</h4>
+            <p>We have two chances to come along straight after fireworks. You can choose either, both or neither.</p>
+          </div>
+
+          <div class="post-purchase-invite-grid">
+            ${postChoice(
+              'climbing',
+              'Climbing / bouldering',
+              'Our next Round Table climbing social is already booked in. Places are limited, so tell us if you would like to join us and we will confirm a place if there is room.',
+              "I'd like to try it",
+              'interested',
+              'Not this time',
+              'no'
+            )}
+            ${postChoice(
+              'meet_and_greet',
+              'Meet the local Round Table family',
+              'Friday 13 November at 8pm, Beermongery.Inc, 40 Long St, Wotton-under-Edge. Meet Wotton Round Table, Ladies Circle, 41 Club and Tangent. It is free, informal, with no speeches and no obligation.',
+              "I'll come along",
+              'yes',
+              'Not this time',
+              'no'
+            )}
+          </div>
+        </div>
+
+        <div class="post-purchase-questions">
+          <div class="post-purchase-questions-heading">
+            <h4>Three quick choices</h4>
+            <p>You can change an answer simply by choosing the other option.</p>
+          </div>
+
+          ${postChoice(
+            'cancellation',
+            'If the display had to be cancelled, could you help us carry the cost?',
+            'By the time a cancellation decision is made, a lot of the event cost may already have been spent or committed. Would you be happy for us to keep your ticket money as a donation, or would you prefer the normal refund route?',
+            'Donate my ticket money',
+            'donate',
+            'Refund me as normal',
+            'refund'
+          )}
+          ${postChoice(
+            'next_year',
+            'Same again next year?',
+            'Use the email address from this booking to tell me when tickets for the 2027 Wotton Firework Display go on sale.',
+            'Tell me when 2027 tickets go on sale',
+            'yes',
+            'No thanks',
+            'no'
+          )}
+          ${postChoice(
+            'other_events',
+            'More good things to do locally?',
+            'Use the email address from this booking to tell me about other Round Table and community events worth coming to.',
+            'Keep me posted',
+            'yes',
+            'No thanks',
+            'no'
+          )}
+        </div>
+
+        ${postPurchaseError ? `<p class="post-purchase-error" role="alert">${postPurchaseError}</p>` : ''}
+
+        <div class="post-purchase-footer">
+          <p>Your answers are stored with this fireworks booking. There is no extra form to submit.</p>
+          <div class="post-purchase-footer-actions">
+            <a class="button button-dark" href="#visit">Plan your visit</a>
+            <button type="button" class="button button-outline" id="post-purchase-book-more">Book more tickets</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    $$('[data-post-choice]', root).forEach((button) => {
+      button.addEventListener('click', () => {
+        queuePostPurchaseChoice(button.dataset.stage, button.dataset.value);
+      });
+    });
+    $('#post-purchase-book-more', root)?.addEventListener('click', showTicketSelectorAgain);
+  }
+
+  async function resetSelectorAfterFinishedCheckout() {
+    if (!finishedWidgetResetPending || finishedResetScheduled) return;
+
+    const overlayVisible = titoCheckoutOverlayVisible();
+    if (overlayVisible) {
+      finishedOverlaySeen = true;
+      return;
+    }
+
+    // Do not tear Tito down before its completed-order panel has actually been
+    // shown. In normal inline checkout we see the panel first, then reset when
+    // the customer dismisses it.
+    if (!finishedOverlaySeen) return;
+
+    finishedResetScheduled = true;
+    try {
+      const next = await fetchAvailability();
+      availabilityState = next;
+      renderAvailability(next.currentWave);
+      finishedWidgetResetPending = false;
+      finishedOverlaySeen = false;
+
+      const snapshot = postPurchaseSnapshot(finishedRegistration);
+      if (snapshot.slug && snapshot.reference) renderPostPurchaseFollowup(snapshot);
+      else createTitoWidget(next);
+    } catch (error) {
+      console.warn('WFD ticket selector reset failed:', error.message);
+      finishedResetScheduled = false;
+      return;
+    }
+    finishedResetScheduled = false;
   }
 
   function ticketQuantityControls(mount) {
@@ -708,6 +983,7 @@
 
     const selectorSuspended = () => (
       registrationInProgress ||
+      finishedWidgetResetPending ||
       titoCheckoutRouteActive() ||
       Date.now() < checkoutHandoffUntil
     );

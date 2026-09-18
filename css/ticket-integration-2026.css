@@ -573,3 +573,222 @@ tito-widget input[type="submit"] {
     padding-right: 12px;
   }
 }
+
+
+/* v13: post-checkout follow-up stays inside the ticket section and uses the
+   confirmed Tito registration only as the place to store the customer's choices. */
+.ticket-box.showing-post-purchase .ticket-help {
+  display: none;
+}
+
+.post-purchase-followup[hidden] {
+  display: none !important;
+}
+
+.post-purchase-followup {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.post-purchase-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--grey);
+  box-shadow: 0 14px 34px rgba(0,0,0,.08);
+}
+
+.post-purchase-heading {
+  padding: 24px 26px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-purchase-heading h3 {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.post-purchase-heading > p:last-child {
+  color: var(--muted);
+  max-width: 760px;
+}
+
+.post-purchase-invite {
+  padding: 24px 26px 26px;
+  background: #FFF3D7;
+  border-bottom: 1px solid #E6C77F;
+}
+
+.post-purchase-invite-copy {
+  max-width: 780px;
+  margin-bottom: 18px;
+}
+
+.post-purchase-eyebrow {
+  display: inline-block;
+  margin-bottom: 5px;
+  color: #7A5514;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.post-purchase-invite-copy h4,
+.post-purchase-questions-heading h4,
+.post-purchase-choice-card h4 {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.post-purchase-invite-copy h4 {
+  font-size: 1.3rem;
+}
+
+.post-purchase-invite-copy p,
+.post-purchase-questions-heading p,
+.post-purchase-choice-card p,
+.post-purchase-footer p {
+  color: var(--muted);
+}
+
+.post-purchase-invite-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.post-purchase-invite-grid .post-purchase-choice-card {
+  border-color: #E2BE6C;
+  background: rgba(255,255,255,.78);
+}
+
+.post-purchase-questions {
+  padding: 24px 26px 10px;
+}
+
+.post-purchase-questions-heading {
+  margin-bottom: 12px;
+}
+
+.post-purchase-choice-card {
+  padding: 17px 18px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.post-purchase-choice-card p {
+  margin-top: 6px;
+  font-size: .94rem;
+}
+
+.post-purchase-choice-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.post-purchase-choice {
+  min-height: 40px;
+  padding: .62rem .9rem;
+  border: 2px solid var(--grey);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--grey);
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.post-purchase-choice:hover,
+.post-purchase-choice:focus-visible {
+  background: #F6F3EC;
+}
+
+.post-purchase-choice.is-selected {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--grey);
+}
+
+.post-purchase-choice-secondary.is-selected {
+  background: var(--grey);
+  border-color: var(--grey);
+  color: #fff;
+}
+
+.post-purchase-saved {
+  min-width: 3.2rem;
+  color: #5C6B43;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.post-purchase-error {
+  margin: 0 26px 18px;
+  padding: 12px 14px;
+  border: 1px solid #D77E74;
+  border-radius: 10px;
+  background: #FFF4F2;
+  color: #7D2D25;
+  font-weight: 700;
+}
+
+.post-purchase-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 26px 24px;
+  border-top: 1px solid var(--border);
+  background: #F8F5EE;
+}
+
+.post-purchase-footer p {
+  margin: 0;
+  max-width: 520px;
+  font-size: .9rem;
+}
+
+.post-purchase-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .post-purchase-heading,
+  .post-purchase-invite,
+  .post-purchase-questions,
+  .post-purchase-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .post-purchase-invite-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-purchase-footer {
+    display: grid;
+  }
+
+  .post-purchase-footer-actions {
+    justify-content: flex-start;
+  }
+
+  .post-purchase-choice-actions {
+    align-items: stretch;
+  }
+
+  .post-purchase-choice {
+    width: 100%;
+  }
+}

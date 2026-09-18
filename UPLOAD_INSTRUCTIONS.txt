@@ -1,64 +1,55 @@
-Wotton Fireworks 2026 Tito integration package v9
-==================================================
+Wotton Fireworks 2026 Tito integration package v13
+===================================================
 
-Target branch: 2026
-Deploy Preview: https://deploy-preview-4--new-wotton.netlify.app/
+V13 POST-CHECKOUT FOLLOW-UP
+---------------------------
+This version keeps the now-working Tito checkout handoff and adds the post-checkout journey.
 
-WHAT V9 FIXES
---------------
-Testing on Tito's own event page confirmed that valid mixed Wave One / Wave Two orders work correctly. The mixed-wave faults seen on the website were therefore introduced by our integration layer, not by Tito ticket settings.
+After a successful order:
+1. Tito's completed-order panel remains visible.
+2. When it is dismissed, the ticket selector is replaced by the Wotton follow-up panel.
+3. The Round Table invitation is prominent:
+   - climbing / bouldering interest;
+   - Friday 13 November 2026, 8pm meet-and-greet at Beermongery.Inc,
+     40 Long St, Wotton-under-Edge, with Round Table, Ladies Circle,
+     41 Club and Tangent.
+4. Three separate quick choices follow:
+   - cancellation donation/refund preference;
+   - 2027 fireworks notification consent;
+   - other Round Table/community event consent.
+5. Each answer saves immediately against the completed Tito registration.
+6. The customer can then Plan your visit or Book more tickets.
 
-V9 deliberately makes the website guard less invasive:
+IMPORTANT
+---------
+The climbing and meet-and-greet responses are stored as interest/RSVP metadata
+against the fireworks booking. They do not create a second Tito ticket.
 
-- All test price-band releases are mounted into one Tito widget once.
-- Wave Two is only hidden/revealed visually. The Tito widget is never rebuilt when the next price becomes available.
-- The website never writes ticket quantities back into Tito and no longer adds its own per-ticket `max` values.
-- The website no longer changes Tito's native disabled state on Continue or on +/- controls. If a price-band total exceeds the remaining Activity allocation, it intercepts Continue and shows the clearer Wotton warning instead.
-- Release rows are mapped primarily from Tito's release identity exposed in the inline HTML, with title/position fallbacks only if necessary. The availability API now also exposes the non-secret release ID for this mapping.
-- Tito remains the final capacity authority. If two customers race for the last tickets, Tito's own Activity capacity still prevents overselling.
-
-There is NO Adult/Child dependency in the website logic, and no Tito order-limit change is required. The earlier suggestion that Test Child W1 had a minimum order limit was incorrect. Tito's own page accepts the same mixed-wave order correctly.
-
-NETLIFY SECRETS
----------------
-Only:
-
-  TITO_API_TOKEN_TEST
-  TITO_API_TOKEN_LIVE
-
-FILES TO UPLOAD / REPLACE
--------------------------
-Upload the whole package over branch 2026, or at minimum replace:
-
+FILES TO ADD / REPLACE
+----------------------
+Replace:
+  /index.html
   /js/fireworks-2026.js
   /css/ticket-integration-2026.css
-  /netlify/functions/ticket-availability.mjs
+  /_redirects
   /README.md
   /docs/integration.md
+  /VERSION.txt
 
-TEST SEQUENCE
--------------
-With both test Activities reset to 20 available:
+Add:
+  /netlify/functions/post-purchase-preference.mjs
 
-1. Select 20 x Test Adult W1. Continue should remain available.
-2. Click + once more to 21. The Wotton warning should appear immediately, Wave Two should be revealed, and Continue should not enter checkout.
-3. Reduce W1 Adult back to 20. Wave Two should stay visible.
-4. Add 1 x Test Adult W2. Do not add any Child ticket.
-5. Click Continue. The valid 20 W1 Adult + 1 W2 Adult selection should pass unchanged into Tito checkout.
-6. Close/cancel checkout and confirm the selector remains usable.
-7. Also test a genuinely mixed W1 order, for example 19 W1 Adult + 1 W1 Child + 1 W2 Adult. This should also pass.
-8. Finally try 20 W1 Adult + 1 W1 Child. The website should block Continue and explain that only 20 W1 tickets are available, while Tito remains the backstop.
+No new Netlify secrets are required.
 
-NETLIFY AUTO-DEPLOY
--------------------
-A commit to branch 2026 should automatically trigger PR #4's Netlify Deploy Preview.
-
-
-V9 ticket quantity behaviour
-----------------------------
-- The API provides the starting number available in each price band.
-- The on-screen “tickets left” count then updates instantly from the customer’s own selections.
-- Each quantity input receives a dynamic HTML max based on the shared Activity allocation, so Adult and Child tickets draw from the same remaining pool.
-- When the current-price allocation reaches zero, the next price band is revealed immediately without rebuilding the Tito widget.
-- The site does not move quantities or reprice tickets automatically.
-- If availability changes concurrently and the customer now has too many current-price tickets selected, Continue is blocked and the warning tells them exactly how many current-price tickets to remove before using the next price.
+TEST
+----
+1. Make one small test purchase.
+2. Complete Tito checkout.
+3. Confirm the Tito completion panel still appears.
+4. Close it.
+5. Confirm the post-checkout panel appears instead of a dead selector.
+6. Click one option in each invite/question and confirm "Saved".
+7. Inspect the Tito test registration metadata for `wfd_preferences`.
+8. Change one answer and confirm the metadata changes.
+9. Click Book more tickets and confirm a fresh selector appears.
+10. Complete a second booking to prove the flow can repeat.

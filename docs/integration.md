@@ -2,81 +2,88 @@
 
 ## Architecture
 
-Tito remains the system of record for booking, payment, confirmation emails, attendee QR codes and gate check-in.
+Tito remains responsible for booking, payment, confirmation emails, ticket QR codes and gate check-in.
 
-The website adds only the pieces Tito does not provide cleanly for this event:
+The public website adds a thin presentation and workflow layer:
 
-- shared price-band availability across several ticket types;
-- a live price-band guard that prevents overselling the current price without freezing the page;
-- automatic reveal of the next price band when a customer tries to go beyond the remaining current-price allocation;
-- source tracking and beneficiary messaging for `/go/...` links;
-- later, controlled Super Saver to Advance to Standard price-band switching.
+- embedded Tito Widget V2;
+- source attribution and beneficiary messaging;
+- shared availability counters for each admission price band;
+- local quantity boundaries so a price band cannot be over-selected deliberately;
+- progressive reveal of later admission price bands;
+- parking groups after admission when they are supplied by the availability endpoint;
+- optional post-checkout choices saved back to the completed Tito registration.
 
-There is no custom group QR, custom gate application, custom confirmation email or attendee-assignment workflow.
+No custom group QR, gate app or transactional email system is used.
 
-## Customer ticket flow
+## Checkout handoff
 
-The tested Tito setup allows one purchaser to book several tickets without assigning each ticket to a separate attendee during checkout. Tito sends one confirmation email containing all ticket QR codes for the booking.
+Tito owns the checkout router. Pressing Continue can add a `tito` query parameter containing the current registration path. That is expected.
 
-Each ticket still has its own QR code. Gate staff use Tito's own check-in app, so members of a group can be scanned together from one phone or arrive separately.
+The selector suspends its own mutation work while Tito checkout is active. On `registration:finished` it removes only the public URL parameter, leaves Tito's completed-order panel untouched, and waits until the purchaser closes that panel before changing the ticket section.
 
-## Netlify secrets
+## Post-checkout journey
 
-Only two Tito API tokens are required:
+After the completed-order panel is dismissed, the ticket selector is hidden and the post-checkout panel is shown.
 
-- `TITO_API_TOKEN_TEST`
-- `TITO_API_TOKEN_LIVE`
+The panel is intentionally non-blocking. Every answer is optional and saves immediately.
 
-The code selects the test token for Deploy Previews, branch deploys and local development. It selects the live token only when Netlify reports the actual `production` context.
+### Recruitment invitation
 
-All non-secret configuration is committed in:
+The invitation is prominent, not an afterthought.
 
-`netlify/functions/_lib/integration-config-2026.mjs`
+- **Climbing / bouldering:** the next Round Table climbing social is already booked in. Places are limited, so the customer can register interest and the club can confirm a place if there is room.
+- **Four-club meet-and-greet:** Friday 13 November 2026 at 8pm, Beermongery.Inc, 40 Long St, Wotton-under-Edge. The invitation names Wotton Round Table, Ladies Circle, 41 Club and Tangent. The customer's yes/no response acts as an RSVP against their fireworks booking.
 
-That includes the Tito account/event names, test Activity names, live release/Activity configuration and feature switches.
+### Other choices
+
+Three separate choices are stored:
+
+- cancellation: `donate` or `refund`;
+- next year's fireworks: `yes` or `no`;
+- other Round Table/community events: `yes` or `no`.
+
+The two marketing permissions are kept separate.
+
+### Storage
+
+`POST /api/post-purchase-preference`
+
+The browser supplies the completed registration slug/reference, stage and allowed value. The server verifies the registration through the Tito Admin API and writes:
+
+- `wfd_preferences`
+- `wfd_preferences_updated_at`
+- `wfd_preferences_source`
+
+Each stored answer also includes a timestamp and wording version.
+
+The browser serialises saves so two rapid answers cannot race and overwrite each other.
 
 ## Test ticket discovery
 
-The Deploy Preview does not need test Activity IDs or test release slugs configured manually. The server uses the test API token to find Activities named:
+Deploy Preview test mode discovers Activities named:
 
 - `Test Wave One`
 - `Test Wave Two`
 
-It then reads the releases attached to those Activities from Tito and supplies their slugs to the embedded widget automatically.
+and uses the releases attached to those Activities.
 
-If those Activity names are changed in Tito, update them in `integration-config-2026.mjs`.
+## Netlify secrets
 
-## Price-band automation
+Only:
 
-`priceAutomationEnabled` is deliberately false initially. The scheduled reconciler runs every ten minutes on Netlify production but does nothing until that Git-tracked switch is set to true.
-
-Tito Activities remain the hard capacity control. The reconciler never raises their capacities. It only changes which paid release band is available when the allocation or time cut-off requires the next band.
+- `TITO_API_TOKEN_TEST`
+- `TITO_API_TOKEN_LIVE`
 
 ## Before launch
 
-1. Complete controlled test-mode purchases through the Deploy Preview.
-2. Verify shared Activity availability and the website quantity guard near the end of a test allocation.
-3. Try to exceed the remaining Wave One allocation. The page must remain responsive, Continue should be blocked while the current-price selection is over the shared Activity limit, and Wave Two should appear for any additional tickets without adding higher-priced tickets automatically.
-4. Test the Wave One to Wave Two handover after Wave One is genuinely sold out.
-5. Fill the live Activity IDs and release slugs in `integration-config-2026.mjs`.
-6. Test production configuration without enabling price automation.
-7. Enable `priceAutomationEnabled` only after the transition logic has been proven.
-
-Tito's standard confirmation emails and Tito check-in app remain in use throughout.
-
-## Widget presentation
-
-The live availability strip now sits inside the ticket box immediately above the Tito ticket controls so it reads as part of the purchasing interface. Tito Widget V2 remains in inline mode, which Tito documents as the mode intended for CSS customisation. The site applies Wotton typography, form and dialog polish without replacing Tito checkout behaviour.
-
-The completed-order overlay normally includes a Tito event-homepage sharing row. Because the Wotton website is the public event page, the integration suppresses that row rather than advertising a second event URL. Tito receipt and individual ticket links remain untouched.
-
-## Quantity-limit behaviour
-
-The guard is deliberately not allowed to silently move tickets onto a higher price. If a customer tries to exceed the remaining quantity in the current band, the over-limit selection remains visible, Continue is blocked, a prominent warning explains the limit, and the next price band is revealed in the same Tito selector. The customer must reduce the current-price selection to the remaining allocation and explicitly choose any additional tickets at the next price.
-
-If availability falls while somebody is already choosing tickets, for example because another customer completes an order, the current selection is not altered silently. Continue is temporarily blocked until the customer reviews and reduces the affected price band.
-
-
-## Tito order-limit configuration
-
-The website does not enforce any Adult/Child purchasing relationship. Direct testing on Tito's own event page confirmed that valid mixed Wave One / Wave Two orders work without a Child-ticket requirement. If the embedded site behaves differently, treat that as an integration defect rather than changing Tito ticket rules to accommodate it.
+1. Complete a small test-mode purchase through the Deploy Preview.
+2. Confirm the Tito checkout and completed-order panel work normally.
+3. Close the completed-order panel and confirm the Wotton post-checkout panel appears.
+4. Test both recruitment responses and all three quick-choice questions.
+5. Check the completed Tito registration metadata to confirm the values were saved.
+6. Click **Book more tickets** and confirm a fresh selector is usable.
+7. Test a second order in the same browser session.
+8. Test the price-band boundary and next-band reveal again.
+9. Add the final live Activities/releases and parking groups.
+10. Enable price automation only after production configuration has been separately tested.

@@ -850,34 +850,25 @@
 
         <div class="post-purchase-heading">
           <p class="kicker kicker-dark">Before you go</p>
-          <h3>Two invitations and three quick choices</h3>
+          <h3>One invitation and three quick choices</h3>
           <p>${optionalCopy}</p>
         </div>
 
         <div class="post-purchase-invite">
           <div class="post-purchase-invite-copy">
             <span class="post-purchase-eyebrow">Round Table is more than fireworks</span>
-            <h4>Fancy seeing what we actually get up to?</h4>
-            <p>We have two chances to come along straight after fireworks. You can choose either, both or neither.</p>
+            <h4>Meet people. Make friends. Try something new.</h4>
+            <p>Round Table is about meeting people, making friends, trying new things and doing something useful for the local community. Round Table itself is for men, but the wider Round Table Family has groups for adult men and women of all ages, so there is a place for everyone to get involved, make friends and become part of something local.</p>
           </div>
 
-          <div class="post-purchase-invite-grid">
+          <div class="post-purchase-invite-prompt">
             ${postChoice(
-              'climbing',
-              'Climbing / bouldering',
-              'Our next Round Table climbing social is already booked in. Places are limited, so tell us if you would like to join us and we will confirm a place if there is room.',
-              "I'd like to try it",
-              'interested',
-              'Not this time',
-              'no'
-            )}
-            ${postChoice(
-              'meet_and_greet',
-              'Meet the local Round Table family',
-              'Friday 13 November at 8pm, Beermongery.Inc, 40 Long St, Wotton-under-Edge. Meet Wotton Round Table, Ladies Circle, 41 Club and Tangent. It is free, informal, with no speeches and no obligation.',
-              "I'll come along",
+              'round_table_invite',
+              'Fancy an exclusive invite?',
+              'Our next events include bouldering and an informal meet-and-greet with Wotton Round Table, Ladies Circle, 41 Club and Tangent at Beermongery.Inc on Friday 13 November at 8pm. If you are curious, we would love to invite you along so you can meet some people and see what the Round Table Family is actually like. No speeches, no pressure and no obligation to join.',
+              'I want my invite',
               'yes',
-              'Not this time',
+              'No thanks',
               'no'
             )}
           </div>
@@ -892,7 +883,7 @@
           ${postChoice(
             'cancellation',
             'If the display had to be cancelled, could you help us carry the cost?',
-            'By the time a cancellation decision is made, a lot of the event cost may already have been spent or committed. Would you be happy for us to keep your ticket money as a donation, or would you prefer the normal refund route?',
+            'By the time a cancellation decision is made, a lot of the event cost may already have been spent or committed. If you choose to donate your ticket money if that happens, we can hold less back each year as a contingency, put more of the money we raise back into our community, and make the future of the display more secure.',
             'Donate my ticket money',
             'donate',
             'Refund me as normal',

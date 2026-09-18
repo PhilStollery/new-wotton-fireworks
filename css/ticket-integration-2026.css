@@ -913,8 +913,8 @@ body.wfd-post-purchase-modal-open {
 }
 
 .wfd-post-purchase-modal {
-  width: min(720px, 100%);
-  margin: 18px auto 40px;
+  width: min(660px, 100%);
+  margin: 14px auto 32px;
   overflow: hidden;
   border-radius: 7px;
   background: #fff;
@@ -924,7 +924,7 @@ body.wfd-post-purchase-modal-open {
 .wfd-post-purchase-modal::before {
   content: "Wotton-under-Edge Firework Display 2026";
   display: block;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-bottom: 1px solid #d7d7d7;
   background: #ececec;
   color: #333;
@@ -991,5 +991,75 @@ body.wfd-post-purchase-modal-open {
     position: sticky;
     top: 0;
     z-index: 3;
+  }
+}
+
+
+/* v17: make the post-purchase continuation a little smaller and turn the
+   Round Table invitation into one clear decision rather than two event cards. */
+.wfd-post-purchase-modal-content .post-purchase-success {
+  padding: 16px 20px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-success-mark {
+  width: 36px;
+  height: 36px;
+  font-size: 1.15rem;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-success h3 {
+  font-size: clamp(1.28rem, 2.6vw, 1.7rem);
+}
+
+.wfd-post-purchase-modal-content .post-purchase-heading {
+  padding: 16px 20px 14px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-invite {
+  padding: 16px 20px 18px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-questions {
+  padding: 16px 20px 6px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-card {
+  padding: 13px 14px;
+  margin-bottom: 9px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-card p {
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.post-purchase-invite-prompt .post-purchase-choice-card {
+  margin-bottom: 0;
+  border-color: #E2BE6C;
+  background: rgba(255,255,255,.8);
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-actions {
+  margin-top: 10px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice {
+  min-height: 36px;
+  padding: .5rem .78rem;
+  font-size: .84rem;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-footer {
+  padding: 12px 20px;
+}
+
+@media (max-width: 650px) {
+  .wfd-post-purchase-modal-content .post-purchase-success,
+  .wfd-post-purchase-modal-content .post-purchase-heading,
+  .wfd-post-purchase-modal-content .post-purchase-invite,
+  .wfd-post-purchase-modal-content .post-purchase-questions,
+  .wfd-post-purchase-modal-content .post-purchase-footer {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }

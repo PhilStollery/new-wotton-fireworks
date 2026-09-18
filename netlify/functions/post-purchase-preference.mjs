@@ -1,12 +1,14 @@
 import { getRegistration, updateRegistrationMetadata } from "./_lib/tito.mjs";
 import { json, readJson, HttpError, toErrorResponse } from "./_lib/http.mjs";
 
-const WORDING_VERSION = "2026-09-18-v1";
+const WORDING_VERSION = "2026-09-18-v2";
 
 const allowed = Object.freeze({
   cancellation: new Set(["donate", "refund"]),
   next_year: new Set(["yes", "no"]),
   other_events: new Set(["yes", "no"]),
+  round_table_invite: new Set(["yes", "no"]),
+  // Retained so existing v13-v16 test metadata can still be updated safely.
   meet_and_greet: new Set(["yes", "no"]),
   climbing: new Set(["interested", "no"])
 });

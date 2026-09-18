@@ -47,7 +47,7 @@ window.FIREWORKS_EVENT = {
       eyebrow: "Free transport",
       title: "Bus",
       price: "Free",
-      copy: "The event bus is free. Everyone arriving by bus uses the same main entrance; stops and timings will be published once confirmed."
+      copy: "Free bus services will serve both Charfield and Wotton-under-Edge. Everyone arriving by bus uses the same main entrance; exact stops and timings will be published once confirmed."
     },
     {
       eyebrow: "Pre-booked",
@@ -74,7 +74,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       title: "Free bus",
-      copy: "The bus is free. Stops, first and last services and return arrangements will be published here when confirmed. Allow time to queue at busy periods."
+      copy: "The bus is free and will serve both Charfield and Wotton-under-Edge. Stops, first and last services and return arrangements will be published here when confirmed. Allow time to queue at busy periods."
     },
     {
       title: "Paid parking",
@@ -133,7 +133,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "How does the free bus work?",
-      a: "The event bus is free. We will publish the stops, timings and return arrangements here once they are confirmed. It is popular, so allow a little extra time for queues at the busiest points of the evening."
+      a: "The event bus is free and will serve both Charfield and Wotton-under-Edge. We will publish the exact stops, timings and return arrangements here once they are confirmed. It is popular, so allow a little extra time for queues at the busiest points of the evening."
     },
     {
       q: "What happens if it rains?",

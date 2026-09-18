@@ -346,3 +346,51 @@ tito-widget input[type="submit"] {
     border-radius: 14px 14px 0 0 !important;
   }
 }
+
+/* v7: later price bands are mounted from the outset so Tito keeps one stable
+   cart state. We reveal/hide only the individual release rows. */
+#tito-mount .wfd-release-row[hidden] {
+  display: none !important;
+}
+
+#tito-mount .wfd-release-row[data-wfd-wave="wave-2"]:not([hidden]) {
+  animation: wfd-wave-reveal .16s ease-out;
+}
+
+@keyframes wfd-wave-reveal {
+  from { opacity: .35; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* v8: visually mark Continue as unavailable without changing Tito's own
+   disabled state or touching its internal cart controls. */
+#tito-mount .wfd-capacity-blocked {
+  opacity: .55 !important;
+  cursor: not-allowed !important;
+}
+
+/* v9: the availability counter is live against the quantities currently
+   selected in the browser. The Admin API supplies the starting allocation;
+   selecting tickets subtracts from that number immediately. */
+.ticket-selector-shell > .ticket-availability.is-empty {
+  background: #FFF3D7;
+}
+
+.ticket-selector-shell > .ticket-availability.is-empty strong {
+  color: #6D4A0B;
+}
+
+.ticket-selector-shell > .ticket-availability.is-over {
+  background: #FFF4F2;
+  border-bottom-color: #E8AAA3;
+}
+
+.ticket-selector-shell > .ticket-availability.is-over strong {
+  color: #8A3028;
+}
+
+#tito-mount input[type="number"][data-wfd-shared-max]:out-of-range {
+  border-color: #C65A4D !important;
+  box-shadow: 0 0 0 2px rgba(198,90,77,.14) !important;
+}

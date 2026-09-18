@@ -3,7 +3,8 @@
   node_bundler = "esbuild"
 
 # Reconcile paid price bands every 10 minutes on the published production deploy.
-# The function itself still refuses to mutate Tito unless FIREWORKS_AUTOMATION_ENABLED=true.
+# The function remains inert until priceAutomationEnabled is set to true in
+# netlify/functions/_lib/integration-config-2026.mjs.
 [functions."tito-reconcile"]
   schedule = "*/10 * * * *"
 

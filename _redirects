@@ -6,21 +6,10 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 /tickets /#tickets 302
 /terms /terms.html 200
 /privacy /privacy.html 200
-/after-booking /after-booking.html 200
-/gate /gate.html 200
 
-# Netlify function routes
+# Netlify function routes used by the public site/testing
 /api/integration-health /.netlify/functions/integration-health 200
 /api/ticket-availability /.netlify/functions/ticket-availability 200
-/api/tito-webhook /.netlify/functions/tito-webhook 200
-/api/order-session /.netlify/functions/order-session 200
-/api/order-view /.netlify/functions/order-view 200
-/api/order-preferences /.netlify/functions/order-preferences 200
-/api/group-qr /.netlify/functions/group-qr 200
-/api/gate-order /.netlify/functions/gate-order 200
-/api/gate-checkin /.netlify/functions/gate-checkin 200
-/api/gate-search /.netlify/functions/gate-search 200
-/api/meet-and-greet /.netlify/functions/meet-and-greet-book 200
 
 # Friendly source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
 /go/bluecoat /index.html 200

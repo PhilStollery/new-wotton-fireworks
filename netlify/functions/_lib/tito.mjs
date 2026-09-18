@@ -51,8 +51,13 @@ export async function searchRegistrations(query, limit = 10, eventSlug) {
   return body?.registrations || [];
 }
 
-export async function getActivity(id) {
-  const body = await titoRequest(`${eventBase()}/activities/${encodeURIComponent(id)}`);
+export async function getActivities(eventSlug) {
+  const body = await titoRequest(`${eventBase(eventSlug)}/activities?page[size]=1000`);
+  return body?.activities || [];
+}
+
+export async function getActivity(id, eventSlug) {
+  const body = await titoRequest(`${eventBase(eventSlug)}/activities/${encodeURIComponent(id)}`);
   return body?.activity;
 }
 

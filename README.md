@@ -51,3 +51,8 @@ All attendees use the Wotton Community Sports Centre entrance on Wotton Road, wh
 ## Further integration notes
 
 See `docs/integration.md`.
+
+
+## V6 ticket boundary behaviour
+
+The live availability strip, allocation warning and Tito widget are wrapped in a single `ticket-selector-shell`, so the availability count visually belongs to the selector. The quantity guard checks Tito's plus/minus button clicks immediately rather than waiting for the 10-second availability poll. If a customer selects more current-price tickets than remain, Continue is blocked, the next price band is revealed in the same widget, and the customer must explicitly reduce the current-price quantity before proceeding. No quantity or price is silently changed.

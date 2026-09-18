@@ -1,0 +1,23 @@
+These files belong to the abandoned custom group-QR, custom email, post-purchase or custom gate flow.
+They are no longer referenced by the v4 site and can be deleted from the 2026 branch when convenient:
+
+after-booking.html
+gate.html
+js/contact-overrides-2026.js
+js/post-purchase-2026.js
+js/gate-2026.js
+netlify/functions/_lib/checkin.mjs
+netlify/functions/_lib/email.mjs
+netlify/functions/_lib/order.mjs
+netlify/functions/_lib/security.mjs
+netlify/functions/gate-checkin.mjs
+netlify/functions/gate-order.mjs
+netlify/functions/gate-search.mjs
+netlify/functions/group-qr.mjs
+netlify/functions/meet-and-greet-book.mjs
+netlify/functions/order-preferences.mjs
+netlify/functions/order-session.mjs
+netlify/functions/order-view.mjs
+netlify/functions/tito-webhook.mjs
+
+They do not need to be deleted before testing v4. _redirects no longer exposes friendly routes to them, and the public site no longer calls them.

@@ -2,7 +2,7 @@ export const MANIFEST_2026 = Object.freeze({
   eventName: "Wotton-under-Edge Firework Display 2026",
   timezone: "Europe/London",
   venue: "Wotton Community PARC, Wotton Road, Wotton-under-Edge, Gloucestershire GL12 8RB",
-  publicEmail: "wotton@roundtable.org.uk",
+  publicEmail: "help@wotton-firework-display.co.uk",
   charityNumber: "1080029",
   eventCapacity: 3500,
   parkingCapacity: 150,

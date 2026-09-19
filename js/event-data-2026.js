@@ -69,8 +69,8 @@ window.FIREWORKS_EVENT = {
       copy: "Gates open at 5pm. The quieter first display is at 6pm, the bonfire is lit at 7pm and the main firework display starts at 7.30pm."
     },
     {
-      title: "One entrance for everyone",
-      copy: "Walkers, cars and the event bus all enter through the Wotton Community Sports Centre entrance. Other site accesses are emergency-only."
+      title: "Road access",
+      copy: "Wotton Road will be closed to non-ticket holders. There is no public access to the event from New Road, so please use pre-booked event parking, walk or take the free bus."
     },
     {
       title: "Free bus",
@@ -82,7 +82,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       title: "Blue Badge parking",
-      copy: "Blue Badge parking is free but must still be booked. Blue Badge and paid parking use the same 150-space parking allocation. A valid Blue Badge must be displayed in the vehicle."
+      copy: "Blue Badge parking is free but must still be booked. A valid Blue Badge must be displayed in the vehicle."
     },
     {
       title: "Outdoor event",
@@ -120,12 +120,20 @@ window.FIREWORKS_EVENT = {
       a: "Parking is booked separately from admission at £10 per vehicle. If you need to drive, add parking when you book your admission tickets; the number of spaces is limited by the site."
     },
     {
+      q: "Can I park on Wotton Road?",
+      a: "No. Wotton Road will be closed to non-ticket holders for the event, so do not plan to park there. If you are driving, please book event parking in advance."
+    },
+    {
+      q: "Can I park on New Road?",
+      a: "Please do not use New Road for event parking. There is no public access to the event from New Road; use pre-booked event parking, walk or take the free event bus instead."
+    },
+    {
       q: "How does Blue Badge parking work?",
-      a: "Blue Badge parking is free but must still be booked. Paid and Blue Badge parking use the same 150-space allocation. A valid Blue Badge must be displayed in the vehicle."
+      a: "Blue Badge parking is free but must still be booked. A valid Blue Badge must be displayed in the vehicle."
     },
     {
       q: "What happens if parking sells out?",
-      a: "Paid and Blue Badge parking use the same 150-space allocation. Once it is full, no further parking can be booked, so please walk or use the free event bus if you can."
+      a: "Once all event parking spaces are booked, no further parking can be reserved, so please walk or use the free event bus if you can."
     },
     {
       q: "How does the free bus work?",
@@ -206,6 +214,7 @@ window.FIREWORKS_EVENT = {
       main>.section .section-heading>p:not(.kicker){font-size:.92rem!important;line-height:1.55!important;max-width:760px;color:rgba(255,255,255,.78)!important}
       .experience-heading>p:not(.kicker),.ticket-heading>p:not(.kicker),.prices-heading>p:not(.kicker){font-size:.92rem!important;line-height:1.55!important;max-width:760px}
       .programme-panel,.visit-card,.entrance-callout,.venue-map-card,.faq-list details,.contact{background:#292925!important;color:#fff!important;border-color:#54544c!important;box-shadow:none!important}
+      .visit-card{border:1px solid #54544c!important}
       .programme-panel p,.visit-card p,.entrance-callout p,.venue-map-card p,.faq-list details p,.faq-list summary,.contact p{color:rgba(255,255,255,.82)!important}
       .programme-list time{color:#FBC15C!important;font-weight:800!important}
       .programme-list li span{color:rgba(255,255,255,.76)!important}

@@ -1,53 +1,41 @@
-Wotton Fireworks 2026 Tito integration package v26
+Wotton Fireworks 2026 Tito integration package v27
 ===================================================
 
-V26 IS CUMULATIVE OVER V25
---------------------------
+V27 IS AN URGENT CUMULATIVE HOTFIX OVER V26
+-------------------------------------------
 Upload the package contents over the 2026 branch, preserving the paths shown.
 
-FILES TO ADD / REPLACE
-----------------------
-Replace:
+The important functional replacement is:
   /js/event-data-2026.js
-  /netlify/functions/ticket-availability.mjs
-  /netlify/functions/_lib/config.mjs
-  /netlify/functions/_lib/tito.mjs
-  /netlify/functions/post-purchase-preference.mjs
-  /terms.html
-  /_redirects
-  /README.md
-  /VERSION.txt
 
-Add/replace:
-  /docs/integration-v26.md
+Also replace the package/version documentation supplied here:
+  /README.md
+  /UPLOAD_INSTRUCTIONS.txt
+  /VERSION.txt
+  /docs/integration-v27.md
 
 Delete if present:
-  /docs/integration-v25.md
+  /docs/integration-v26.md
+
+The remaining files are included so this is a cumulative package and can safely be uploaded over v26.
 
 DO NOT REPLACE
 --------------
 Do not overwrite /netlify/functions/_lib/integration-config-2026.mjs. Existing Tito IDs/slugs entered there must remain intact.
 
-TITO ACTIVITY MODEL
--------------------
-# Event Capacity          3,500 overall admissions
-# Parking Capacity          150 shared paid + Blue Badge spaces
-Release 1 - Super Saver     300
-Release 2 - Advance         700
-Release 3 - Standard        unlimited at release level
+WHAT THIS FIXES
+---------------
+V26 changed the presentation scheduler to queueMicrotask while a MutationObserver watched the page. Because the presentation code itself changes the DOM, it could immediately trigger itself again and starve the browser, making the page appear frozen.
 
-Pre-school/comps should count against # Event Capacity in Tito. Standard therefore uses the remaining Event Capacity rather than a separate fixed website allocation.
+V27 returns presentation updates to requestAnimationFrame and disconnects the observer while the presentation pass changes its own DOM.
 
 QUICK TEST
 ----------
-1. Change quantities repeatedly and confirm no old counter wording flashes (for example “Availability is shared…” or “left at this price”).
-2. Trigger an automatic spill/reduction. Confirm the adjusted quantity flashes and the warning remains until **OK** is pressed.
-3. Add a Pre-school ticket and confirm the browser-side remaining overall admission capacity reduces by one (most visible when checking Standard availability).
-4. Confirm the FAQ kicker says **FAQ**.
-5. Confirm the FAQ is one rounded panel; questions use white right/down triangles on the left and no +/- controls overlap the text.
-6. Confirm the gap between the ticket section and Plan your visit is materially smaller.
-7. Confirm **Need an update?** is again a full-width yellow section, not a dark inset panel.
-8. Re-test Super Saver -> Advance -> Standard spillover and the shared 150-space parking counter.
-9. Complete a test checkout and confirm Tito confirmation/QR emails and the post-purchase follow-up still behave normally.
+1. Load the Deploy Preview and confirm scrolling/clicking remains responsive for at least a minute.
+2. Expand and collapse several FAQ items.
+3. Change ticket quantities repeatedly and confirm the page remains responsive.
+4. Trigger an automatic ticket spill/reduction and confirm the acknowledgement warning still works.
+5. Confirm counters/ticket rows still update after Tito/widget DOM changes.
+6. Complete one test checkout if convenient.
 
 No new Netlify environment variables are required.

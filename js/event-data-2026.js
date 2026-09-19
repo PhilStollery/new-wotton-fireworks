@@ -830,7 +830,16 @@ window.FIREWORKS_EVENT = {
     const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v25-tito-email')){const p=document.createElement('p');p.className='wfd-v25-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
   }
 
-  function schedulePatch(){if(patchScheduled)return;patchScheduled=true;queueMicrotask(()=>{patchScheduled=false;patchPresentation();});}
+  function schedulePatch(){
+    if(patchScheduled)return;
+    patchScheduled=true;
+    window.requestAnimationFrame(()=>{
+      patchScheduled=false;
+      if(observer)observer.disconnect();
+      try{patchPresentation();}
+      finally{if(observer)observer.observe(document.body,{childList:true,subtree:true});}
+    });
+  }
 
   window.setInterval=function(fn,delay,...args){const body=typeof fn==='function'?Function.prototype.toString.call(fn):'';if(Number(delay)===10000&&/refreshAvailability/.test(body))return nativeSetInterval(()=>{if(document.visibilityState!=='hidden')fn(...args);},30000);return nativeSetInterval(fn,delay,...args);};
 

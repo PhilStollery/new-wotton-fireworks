@@ -1,16 +1,13 @@
-# Wotton-under-Edge Firework Display 2026 — v20
+# Wotton-under-Edge Firework Display 2026 — Tito integration v22
 
-V20 is cumulative over v19 and fixes the preview/ticket-presentation issues found during testing.
+V22 is cumulative over v21. It keeps the established Tito checkout flow, ticket availability logic and site styling, and makes the requested customer-facing wording changes.
 
 Key changes:
 
-- the three travel cards now actively capture **Walk**, **Bus from Wotton**, **Bus from Charfield** or **Park**;
-- paid and Blue Badge parking are represented by one **Parking** travel card; selecting it explicitly does **not** reserve parking and directs the purchaser to choose the number/type of spaces in the ticket list;
-- Blue Badge wording now states that a valid Blue Badge must be displayed in the vehicle;
-- admission-wave counters are forced back to ticket wording, so they cannot inherit the parking wording;
-- the pre-school ticket has a static “Everyone attending needs a ticket” header and never exposes overall event capacity;
-- preview/test mode now uses the real customer-facing Super Saver, Advance, Standard, pre-school and parking releases rather than the obsolete Test Wave releases;
-- the paid price bands remain progressively revealed by the front end while all of those releases can remain on sale in Tito;
-- the v19 server-side caching, post-purchase write validation/rate limiting, `wfd_responses` metadata and Tito-email warning are retained.
+- The pre-school reminder now says: “Children who have not yet started Reception attend free, but please make sure they have a ticket.”
+- The travel card previously labelled **Parking** is now **Driving**.
+- Driving guidance now makes clear that parking must actually be booked in the ticket selector, that Wotton Road will be closed to non-ticket holders, and that New Road must not be used for event access or parking.
+- Blue Badge wording continues to state that a valid Blue Badge must be displayed.
+- The separate travel-planning note still makes clear that the choice is only to help estimate demand, is not a commitment, and does not need updating if plans change.
 
-Tito remains the system of record for checkout, payment, confirmation emails, ticket QR codes, ticket capacity and gate check-in.
+All v21 availability/load/security fixes are retained. Tito remains responsible for booking, payment, confirmation emails, QR codes, reservations/holds and gate check-in.

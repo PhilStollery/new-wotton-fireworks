@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { getConfig } from "./_lib/config.mjs";
-import { getActivity, getReleases } from "./_lib/tito.mjs";
+import { getActivity, getActivities, getReleases } from "./_lib/tito.mjs";
 import { HttpError, json, toErrorResponse } from "./_lib/http.mjs";
 
 const CACHE_TTL_MS = 10_000;
@@ -15,6 +15,16 @@ export const config = {
 
 function normalise(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function activityId(value) {
+  if (value == null) return "";
+  if (typeof value === "object") return String(value.id ?? value.activity_id ?? value.activityId ?? value.slug ?? "");
+  return String(value);
+}
+
+function releaseActivityIds(release) {
+  return new Set((Array.isArray(release?.activities) ? release.activities : []).map(activityId).filter(Boolean));
 }
 
 function releaseSummary(release) {
@@ -76,7 +86,7 @@ function releaseGroupSoldOut(details) {
   return Boolean(details.length) && details.every((release) => !releaseIsAvailable(release));
 }
 
-function activitySummary({ key, label, activityName, counterMode = "capacity" }, activity, releaseDetails = null) {
+function activitySummary({ key, label, activityName, counterMode = "capacity", kind = "admission" }, activity, releaseDetails = null) {
   const capacity = Number.isFinite(Number(activity?.capacity)) ? Number(activity.capacity) : null;
   const allocationCount = Number(activity?.allocation_count ?? activity?.allocationCount ?? 0);
   const remaining = capacity == null ? null : Math.max(capacity - allocationCount, 0);
@@ -90,9 +100,12 @@ function activitySummary({ key, label, activityName, counterMode = "capacity" },
   return {
     key,
     label,
+    kind,
     capacity,
     allocationCount,
-    remaining,
+    remaining: remaining == null ? UNBOUNDED_LOCAL_REMAINING : remaining,
+    displayRemaining: remaining,
+    remainingKnown: remaining != null,
     soldOut: Boolean(activity?.sold_out) || (capacity != null && capacity > 0 && remaining <= 0) || releaseGroupSoldOut(details),
     counterMode,
     releases,
@@ -100,15 +113,18 @@ function activitySummary({ key, label, activityName, counterMode = "capacity" },
   };
 }
 
-function staticGroup({ key, label, counterMode, releaseDetails, soldOut = null, capacity = null, allocationCount = 0, remaining = null }) {
+function staticGroup({ key, label, kind = "standalone", counterMode, releaseDetails, soldOut = null, capacity = null, allocationCount = 0, remaining = UNBOUNDED_LOCAL_REMAINING, displayRemaining = null, remainingKnown = false }) {
   const details = uniqueReleaseDetails(releaseDetails || []);
   if (!details.length) return null;
   return {
     key,
     label,
+    kind,
     capacity,
     allocationCount,
     remaining,
+    displayRemaining,
+    remainingKnown,
     soldOut: soldOut == null ? releaseGroupSoldOut(details) : Boolean(soldOut),
     counterMode,
     releases: details.map((release) => release.slug),
@@ -153,133 +169,295 @@ function isComplimentaryRelease(release) {
 }
 
 function isLegacyTestRelease(release) {
-  return /\btest\s*wave\b|^test[\s_-]/i.test(releaseText(release));
+  const title = String(release?.title || release?.name || "");
+  const slug = String(release?.slug || "");
+  return /\btest\s*wave\b/i.test(`${title} ${slug}`) || /^test[\s_-]/i.test(title) || /^test[\s_-]/i.test(slug);
 }
 
-function configuredOrMatched(configuredSlugs, allReleaseDetails, predicate) {
+function configuredDetails(configuredSlugs, allReleaseDetails) {
   const configured = new Set((configuredSlugs || []).filter(Boolean).map(String));
-  const byConfig = configured.size
-    ? allReleaseDetails.filter((release) => configured.has(String(release.slug)))
-    : [];
-  return byConfig.length ? byConfig : allReleaseDetails.filter(predicate);
+  if (!configured.size) return [];
+  return allReleaseDetails.filter((release) => configured.has(String(release.slug)));
 }
 
 function soldCount(details) {
   return details.reduce((sum, release) => sum + Math.max(0, Number(release.ticketsCount || 0)), 0);
 }
 
-function testWave({ key, label, counterMode = "capacity", releaseDetails, capacity }) {
+function activityName(activity) {
+  return String(activity?.name || activity?.title || activity?.slug || "");
+}
+
+function activityCapacity(activity) {
+  return Number.isFinite(Number(activity?.capacity)) ? Number(activity.capacity) : null;
+}
+
+function scoreActivity(activity, { expectedCapacity = null, patterns = [], excludeIds = new Set() } = {}) {
+  const id = activityId(activity);
+  if (!id || excludeIds.has(id)) return -Infinity;
+  const name = normalise(activityName(activity));
+  const capacity = activityCapacity(activity);
+  let score = 0;
+
+  if (Number.isFinite(Number(expectedCapacity)) && capacity === Number(expectedCapacity)) score += 120;
+  if (patterns.some((pattern) => pattern.test(name))) score += 90;
+  if (Number.isFinite(Number(expectedCapacity)) && capacity != null && capacity > 0) {
+    const ratio = Math.abs(capacity - Number(expectedCapacity)) / Math.max(Number(expectedCapacity), 1);
+    score += Math.max(0, 25 - ratio * 25);
+  }
+  if (/test\s*wave/i.test(name)) score -= 200;
+  return score;
+}
+
+function findActivity(activities, options = {}) {
+  const ranked = (activities || [])
+    .map((activity) => ({ activity, score: scoreActivity(activity, options) }))
+    .filter((entry) => Number.isFinite(entry.score) && entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.activity || null;
+}
+
+function releasesForActivity(releases, activity) {
+  const id = activityId(activity);
+  if (!id) return [];
+  return releases.filter((release) => releaseActivityIds(release).has(id));
+}
+
+function findLinkedActivity(releaseDetails, activities, options = {}, allowGlobalFallback = true) {
+  const detailSets = (releaseDetails || [])
+    .map(releaseActivityIds)
+    .filter((set) => set.size);
+
+  if (detailSets.length) {
+    const intersection = new Set(detailSets[0]);
+    detailSets.slice(1).forEach((set) => {
+      [...intersection].forEach((id) => { if (!set.has(id)) intersection.delete(id); });
+    });
+    const common = (activities || []).filter((activity) => intersection.has(activityId(activity)));
+    const commonMatch = findActivity(common, options);
+    if (commonMatch) return commonMatch;
+
+    const union = new Set(detailSets.flatMap((set) => [...set]));
+    const linked = (activities || []).filter((activity) => union.has(activityId(activity)));
+    const linkedMatch = findActivity(linked, options);
+    if (linkedMatch) return linkedMatch;
+  }
+
+  return allowGlobalFallback ? findActivity(activities, options) : null;
+}
+
+function inferCustomerReleaseGroups(config, allReleaseDetails, activities) {
+  const superActivity = findActivity(activities, {
+    expectedCapacity: config.manifest.superSaverCapacity,
+    patterns: [/super\s*saver/, /super-saver/]
+  });
+  const advanceActivity = findActivity(activities, {
+    expectedCapacity: config.manifest.advanceCapacity,
+    patterns: [/\badvance\b/]
+  });
+  const generalParkingActivity = findActivity(activities, {
+    expectedCapacity: config.manifest.generalParkingCapacity,
+    patterns: [/general.*parking/, /parking.*general/]
+  });
+  const parkingActivity = findActivity(activities, {
+    expectedCapacity: config.manifest.parkingCapacity,
+    patterns: [/parking.*capacity/, /parking/],
+    excludeIds: new Set(generalParkingActivity ? [activityId(generalParkingActivity)] : [])
+  });
+  const eventActivity = findActivity(activities, {
+    expectedCapacity: config.manifest.eventCapacity,
+    patterns: [/event.*capacity/, /admission.*capacity/, /overall.*capacity/]
+  });
+
+  let superSaverDetails = configuredDetails(config.tito.releases.superSaver, allReleaseDetails);
+  if (!superSaverDetails.length && superActivity) {
+    superSaverDetails = releasesForActivity(allReleaseDetails, superActivity)
+      .filter((release) => !isPreschoolRelease(release) && !isParkingRelease(release) && !isComplimentaryRelease(release));
+  }
+  if (!superSaverDetails.length) superSaverDetails = allReleaseDetails.filter(isSuperSaverRelease);
+
+  let advanceDetails = configuredDetails(config.tito.releases.advance, allReleaseDetails);
+  if (!advanceDetails.length && advanceActivity) {
+    advanceDetails = releasesForActivity(allReleaseDetails, advanceActivity)
+      .filter((release) => !isPreschoolRelease(release) && !isParkingRelease(release) && !isComplimentaryRelease(release));
+  }
+  if (!advanceDetails.length) advanceDetails = allReleaseDetails.filter(isAdvanceRelease);
+
+  let preschoolDetails = configuredDetails([config.tito.releases.preschool], allReleaseDetails);
+  if (!preschoolDetails.length) preschoolDetails = allReleaseDetails.filter(isPreschoolRelease);
+
+  let paidParkingDetails = configuredDetails([config.tito.releases.paidParking], allReleaseDetails);
+  if (!paidParkingDetails.length && generalParkingActivity) {
+    paidParkingDetails = releasesForActivity(allReleaseDetails, generalParkingActivity).filter(isPaidParking);
+  }
+  if (!paidParkingDetails.length) paidParkingDetails = allReleaseDetails.filter(isPaidParking);
+
+  let blueBadgeDetails = configuredDetails([config.tito.releases.blueBadgeParking], allReleaseDetails);
+  if (!blueBadgeDetails.length) blueBadgeDetails = allReleaseDetails.filter(isBlueBadgeParking);
+
+  let standardDetails = configuredDetails(config.tito.releases.standard, allReleaseDetails);
+  if (!standardDetails.length) standardDetails = allReleaseDetails.filter(isStandardRelease);
+  if (!standardDetails.length && eventActivity) {
+    const excluded = new Set([
+      ...superSaverDetails,
+      ...advanceDetails,
+      ...preschoolDetails,
+      ...paidParkingDetails,
+      ...blueBadgeDetails
+    ].map((release) => String(release.slug)));
+    standardDetails = releasesForActivity(allReleaseDetails, eventActivity)
+      .filter((release) => !excluded.has(String(release.slug)) && !isParkingRelease(release) && !isComplimentaryRelease(release));
+  }
+
+  return {
+    superActivity: superSaverDetails.length
+      ? (findLinkedActivity(superSaverDetails, activities, {
+          expectedCapacity: config.manifest.superSaverCapacity,
+          patterns: [/super\s*saver/, /super-saver/]
+        }) || superActivity)
+      : null,
+    advanceActivity: advanceDetails.length
+      ? (findLinkedActivity(advanceDetails, activities, {
+          expectedCapacity: config.manifest.advanceCapacity,
+          patterns: [/\badvance\b/]
+        }) || advanceActivity)
+      : null,
+    generalParkingActivity: paidParkingDetails.length
+      ? (findLinkedActivity(paidParkingDetails, activities, {
+          expectedCapacity: config.manifest.generalParkingCapacity,
+          patterns: [/general.*parking/, /parking.*general/]
+        }) || generalParkingActivity)
+      : null,
+    parkingActivity,
+    eventActivity,
+    superSaverDetails: uniqueReleaseDetails(superSaverDetails),
+    advanceDetails: uniqueReleaseDetails(advanceDetails),
+    standardDetails: uniqueReleaseDetails(standardDetails),
+    preschoolDetails: uniqueReleaseDetails(preschoolDetails),
+    paidParkingDetails: uniqueReleaseDetails(paidParkingDetails),
+    blueBadgeDetails: uniqueReleaseDetails(blueBadgeDetails)
+  };
+}
+
+function fallbackAdmissionWave({ key, label, releaseDetails }) {
   const details = uniqueReleaseDetails(releaseDetails || []);
   if (!details.length) return null;
-  const allocationCount = soldCount(details);
-  const remaining = Number.isFinite(Number(capacity))
-    ? Math.max(Number(capacity) - allocationCount, 0)
-    : UNBOUNDED_LOCAL_REMAINING;
   return staticGroup({
     key,
     label,
-    counterMode,
+    kind: "admission",
+    counterMode: "capacity-unknown",
     releaseDetails: details,
-    capacity: Number.isFinite(Number(capacity)) ? Number(capacity) : null,
-    allocationCount,
-    remaining,
-    soldOut: releaseGroupSoldOut(details) || remaining <= 0
+    soldOut: releaseGroupSoldOut(details),
+    remaining: UNBOUNDED_LOCAL_REMAINING,
+    displayRemaining: null,
+    remainingKnown: false
   });
-}
-
-function releaseSpecificRemaining(details, fallbackCapacity) {
-  const quantities = details.map((release) => release.quantity).filter((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
-  if (quantities.length === details.length && details.length) {
-    return Math.max(quantities.reduce((sum, value) => sum + Number(value), 0) - soldCount(details), 0);
-  }
-  if (Number.isFinite(Number(fallbackCapacity))) {
-    return Math.max(Number(fallbackCapacity) - soldCount(details), 0);
-  }
-  return UNBOUNDED_LOCAL_REMAINING;
 }
 
 function usableWave(wave) {
   if (!wave || wave.soldOut || wave.expired) return false;
-  return wave.remaining == null || Number(wave.remaining) > 0;
+  if (wave.remainingKnown === false) return true;
+  return Number(wave.remaining || 0) > 0;
 }
 
 async function buildTestAvailability(config) {
-  // Tito's widget test_mode plugin handles test checkout. For preview we now use
-  // the real customer-facing releases, so the preview mirrors the launch layout
-  // while transactions remain test transactions.
-  const rawReleases = await getReleases();
+  // Test checkout uses the real customer-facing releases and Tito's test_mode
+  // widget. Activities remain the authoritative counters where they can be
+  // identified, so test allocations advance exactly as the live waves will.
+  const [rawReleases, activities] = await Promise.all([getReleases(), getActivities()]);
   const allReleaseDetails = uniqueReleaseDetails(rawReleases)
     .filter((release) => !release.archived && !isComplimentaryRelease(release) && !isLegacyTestRelease(release));
 
-  const superSaverDetails = configuredOrMatched(config.tito.releases.superSaver, allReleaseDetails, isSuperSaverRelease);
-  const advanceDetails = configuredOrMatched(config.tito.releases.advance, allReleaseDetails, isAdvanceRelease);
-  const standardDetails = configuredOrMatched(config.tito.releases.standard, allReleaseDetails, isStandardRelease);
-  const preschoolDetails = configuredOrMatched([config.tito.releases.preschool], allReleaseDetails, isPreschoolRelease);
-  const paidParkingDetails = configuredOrMatched([config.tito.releases.paidParking], allReleaseDetails, isPaidParking);
-  const blueBadgeDetails = configuredOrMatched([config.tito.releases.blueBadgeParking], allReleaseDetails, isBlueBadgeParking);
+  const groups = inferCustomerReleaseGroups(config, allReleaseDetails, activities);
 
-  const waves = [
-    testWave({
-      key: "super-saver",
-      label: "Super Saver",
-      releaseDetails: superSaverDetails,
-      capacity: config.manifest.superSaverCapacity
-    }),
-    testWave({
-      key: "advance",
-      label: "Advance",
-      releaseDetails: advanceDetails,
-      capacity: config.manifest.advanceCapacity
-    }),
-    standardDetails.length ? staticGroup({
-      key: "standard",
-      label: "Standard",
-      counterMode: "standard-static",
-      releaseDetails: standardDetails,
-      remaining: UNBOUNDED_LOCAL_REMAINING
-    }) : null
-  ].filter(Boolean);
+  const superSaver = groups.superSaverDetails.length
+    ? (groups.superActivity
+        ? activitySummary(
+            { key: "super-saver", label: "Super Saver", kind: "admission", counterMode: "capacity" },
+            groups.superActivity,
+            groups.superSaverDetails
+          )
+        : fallbackAdmissionWave({ key: "super-saver", label: "Super Saver", releaseDetails: groups.superSaverDetails }))
+    : null;
 
+  const advance = groups.advanceDetails.length
+    ? (groups.advanceActivity
+        ? activitySummary(
+            { key: "advance", label: "Advance", kind: "admission", counterMode: "capacity" },
+            groups.advanceActivity,
+            groups.advanceDetails
+          )
+        : fallbackAdmissionWave({ key: "advance", label: "Advance", releaseDetails: groups.advanceDetails }))
+    : null;
+
+  const standard = groups.standardDetails.length
+    ? staticGroup({
+        key: "standard",
+        label: "Standard",
+        kind: "admission",
+        counterMode: "standard-static",
+        releaseDetails: groups.standardDetails,
+        soldOut: releaseGroupSoldOut(groups.standardDetails)
+      })
+    : null;
+
+  const waves = [superSaver, advance, standard].filter(Boolean);
   if (!waves.length) {
-    throw new HttpError(503, "No customer admission releases could be identified. Check that the Super Saver, Advance and Standard tickets are on sale and named/configured as expected.");
+    throw new HttpError(503, "No customer admission releases could be identified. Check the on-sale Tito releases and their Activities.");
   }
 
-  // Pre-school is deliberately kept out of the paid price waves. A large local
-  // remaining value prevents the presentation layer from imposing a fake cap;
-  // Tito's own release/Activity limits remain authoritative. The front end
-  // replaces the generated counter with a static all-attendees reminder.
-  const preschool = preschoolDetails.length ? staticGroup({
-    key: "preschool",
-    label: "Everyone attending needs a ticket",
-    counterMode: "ticket-reminder",
-    releaseDetails: preschoolDetails,
-    remaining: UNBOUNDED_LOCAL_REMAINING
-  }) : null;
+  const preschool = groups.preschoolDetails.length
+    ? staticGroup({
+        key: "preschool",
+        label: "Everyone attending needs a ticket",
+        kind: "standalone",
+        counterMode: "ticket-reminder",
+        releaseDetails: groups.preschoolDetails,
+        soldOut: releaseGroupSoldOut(groups.preschoolDetails)
+      })
+    : null;
 
-  const generalParkingRemaining = releaseSpecificRemaining(paidParkingDetails, config.manifest.generalParkingCapacity);
-  const blueBadgeRemaining = releaseSpecificRemaining(blueBadgeDetails, config.manifest.blueBadgeReserve);
+  let generalParking = null;
+  if (groups.paidParkingDetails.length) {
+    generalParking = groups.generalParkingActivity
+      ? activitySummary(
+          { key: "general-parking", label: "Parking", kind: "parking", counterMode: "parking-general" },
+          groups.generalParkingActivity,
+          groups.paidParkingDetails
+        )
+      : staticGroup({
+          key: "general-parking",
+          label: "Parking",
+          kind: "parking",
+          counterMode: "parking-general",
+          releaseDetails: groups.paidParkingDetails,
+          soldOut: releaseGroupSoldOut(groups.paidParkingDetails)
+        });
+  }
 
-  const generalParking = paidParkingDetails.length ? staticGroup({
-    key: "general-parking",
-    label: "Parking",
-    counterMode: "parking-general",
-    releaseDetails: paidParkingDetails,
-    capacity: config.manifest.generalParkingCapacity,
-    allocationCount: soldCount(paidParkingDetails),
-    remaining: generalParkingRemaining,
-    soldOut: releaseGroupSoldOut(paidParkingDetails) || generalParkingRemaining <= 0
-  }) : null;
-
-  const blueBadgeParking = blueBadgeDetails.length ? staticGroup({
-    key: "blue-badge-parking",
-    label: "Blue Badge parking",
-    counterMode: "parking-accessible",
-    releaseDetails: blueBadgeDetails,
-    capacity: config.manifest.blueBadgeReserve,
-    allocationCount: soldCount(blueBadgeDetails),
-    remaining: blueBadgeRemaining,
-    soldOut: releaseGroupSoldOut(blueBadgeDetails) || blueBadgeRemaining <= 0
-  }) : null;
+  let blueBadgeParking = null;
+  if (groups.blueBadgeDetails.length) {
+    const blueBadgeActivity = findLinkedActivity(groups.blueBadgeDetails, activities, {
+      expectedCapacity: config.manifest.blueBadgeReserve,
+      patterns: [/blue\s*badge/, /accessible.*parking/],
+      excludeIds: new Set(groups.parkingActivity ? [activityId(groups.parkingActivity)] : [])
+    }, false);
+    blueBadgeParking = blueBadgeActivity
+      ? activitySummary(
+          { key: "blue-badge-parking", label: "Blue Badge parking", kind: "parking", counterMode: "parking-accessible" },
+          blueBadgeActivity,
+          groups.blueBadgeDetails
+        )
+      : staticGroup({
+          key: "blue-badge-parking",
+          label: "Blue Badge parking",
+          kind: "parking",
+          counterMode: "parking-accessible",
+          releaseDetails: groups.blueBadgeDetails,
+          soldOut: releaseGroupSoldOut(groups.blueBadgeDetails)
+        });
+  }
 
   return {
     ok: true,
@@ -329,55 +507,55 @@ async function buildLiveAvailability(config) {
   const admissionClose = DateTime.fromISO(config.manifest.admissionCloseLocal, { zone });
 
   const superSaver = activitySummary(
-    { key: "super-saver", label: "Super Saver" },
+    { key: "super-saver", label: "Super Saver", kind: "admission", counterMode: "capacity" },
     superSaverActivity,
     pickReleaseDetails(config.tito.releases.superSaver, superSaverActivity, allReleaseDetails)
   );
   superSaver.expired = now >= superSaverCutoff;
 
   const advance = activitySummary(
-    { key: "advance", label: "Advance" },
+    { key: "advance", label: "Advance", kind: "admission", counterMode: "capacity" },
     advanceActivity,
     pickReleaseDetails(config.tito.releases.advance, advanceActivity, allReleaseDetails)
   );
   advance.expired = now >= advanceCutoff;
 
-  const standard = activitySummary(
-    { key: "standard", label: "Standard", counterMode: "standard-static" },
-    eventActivity,
-    pickReleaseDetails(config.tito.releases.standard, eventActivity, allReleaseDetails)
-  );
-  standard.expired = now >= admissionClose;
+  const standard = staticGroup({
+    key: "standard",
+    label: "Standard",
+    kind: "admission",
+    counterMode: "standard-static",
+    releaseDetails: pickReleaseDetails(config.tito.releases.standard, eventActivity, allReleaseDetails),
+    soldOut: Boolean(eventActivity?.sold_out) || releaseGroupSoldOut(pickReleaseDetails(config.tito.releases.standard, eventActivity, allReleaseDetails))
+  });
+  if (standard) standard.expired = now >= admissionClose;
 
   const preschool = staticGroup({
     key: "preschool",
     label: "Everyone attending needs a ticket",
+    kind: "standalone",
     counterMode: "ticket-reminder",
     releaseDetails: pickReleaseDetails([config.tito.releases.preschool], eventActivity, allReleaseDetails),
-    remaining: UNBOUNDED_LOCAL_REMAINING,
-    soldOut: Boolean(eventActivity?.sold_out) || standard.remaining === 0
+    soldOut: Boolean(eventActivity?.sold_out)
   });
 
   const generalParking = activitySummary(
-    { key: "general-parking", label: "Parking", counterMode: "parking-general" },
+    { key: "general-parking", label: "Parking", kind: "parking", counterMode: "parking-general" },
     generalParkingActivity,
     pickReleaseDetails([config.tito.releases.paidParking], generalParkingActivity, allReleaseDetails)
   );
 
   const blueBadgeDetails = pickReleaseDetails([config.tito.releases.blueBadgeParking], parkingActivity, allReleaseDetails);
-  const blueBadgeRemaining = releaseSpecificRemaining(blueBadgeDetails, config.manifest.blueBadgeReserve);
   const blueBadgeParking = staticGroup({
     key: "blue-badge-parking",
     label: "Blue Badge parking",
+    kind: "parking",
     counterMode: "parking-accessible",
     releaseDetails: blueBadgeDetails,
-    capacity: config.manifest.blueBadgeReserve,
-    allocationCount: soldCount(blueBadgeDetails),
-    remaining: blueBadgeRemaining,
-    soldOut: releaseGroupSoldOut(blueBadgeDetails) || blueBadgeRemaining <= 0 || Boolean(parkingActivity?.sold_out)
+    soldOut: releaseGroupSoldOut(blueBadgeDetails) || Boolean(parkingActivity?.sold_out)
   });
 
-  const waves = [superSaver, advance, standard];
+  const waves = [superSaver, advance, standard].filter(Boolean);
   const currentWave = now < salesOpen || now >= admissionClose
     ? null
     : waves.find(usableWave) || null;

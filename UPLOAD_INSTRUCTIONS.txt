@@ -1,10 +1,11 @@
-Wotton Fireworks 2026 Tito integration package v20
+Wotton Fireworks 2026 Tito integration package v22
 ===================================================
 
 PURPOSE
 -------
-V20 is cumulative over v19 and fixes the five issues found in preview testing.
-It keeps the established Tito checkout flow intact.
+V22 is cumulative over v21. It retains the v21 ticket counting, Standard reveal,
+parking availability, load protection, metadata and security fixes, and applies
+the latest customer-facing wording changes.
 
 FILES TO REPLACE
 ----------------
@@ -20,85 +21,67 @@ FILES TO REPLACE
 
 FILES TO ADD / REPLACE
 ----------------------
-/docs/integration-v20.md
+/docs/integration-v22.md
 
 DO NOT REPLACE
 --------------
 /netlify/functions/_lib/integration-config-2026.mjs
 
 That file contains the Tito operational IDs/slugs and may already have been
-edited separately. V20 reads it if populated, but preview mode can also identify
-the on-sale customer releases by their Super Saver / Advance / Standard /
-pre-school / parking names.
+edited separately.
 
 NO NETLIFY UI CHANGES ARE REQUIRED
 ----------------------------------
 The existing TITO_API_TOKEN_TEST and TITO_API_TOKEN_LIVE variables remain the
 only secrets.
 
-V20 FIXES
----------
-1. TRAVEL CARDS
-   - Walk and Parking are now whole-card selections (mouse and keyboard).
-   - Bus offers separate Wotton and Charfield choices.
-   - Paid and Blue Badge parking are combined into one Parking travel card.
-   - The Parking card explicitly says the selection only records travel intent;
-     the customer must still select the number and type of parking spaces below.
+V22 WORDING CHANGES
+-------------------
+1. PRE-SCHOOL
+   - The static reminder now says:
+     “Children who have not yet started Reception attend free, but please make
+     sure they have a ticket.”
+   - The FAQ and ticket terms use matching wording.
 
-2. ADMISSION COUNTER WORDING
-   - Super Saver / Advance / Standard counters are explicitly treated as
-     admission and cannot show “parking options below”.
+2. DRIVING / PARKING
+   - The travel-planning card is now titled “Driving”.
+   - It tells customers that if they plan to drive they must make sure parking
+     has actually been booked in the ticket selector below.
+   - It warns that Wotton Road will be closed to non-ticket holders and they
+     will not be able to park there.
+   - It states there is no event access from New Road and tells customers not to
+     use New Road for parking.
+   - The valid Blue Badge display requirement is retained.
 
-3. PRE-SCHOOL
-   - The pre-school ticket remains outside the paid waves.
-   - Its header is always a static reminder that every attendee needs a ticket.
-   - Overall event-capacity numbers are never shown against the pre-school ticket.
+3. TRAVEL PLANNING STATUS
+   - The existing note remains: the travel choice is only to help plan likely
+     demand, does not commit the customer to a travel method or reserve anything,
+     and does not need updating if plans change later.
 
-4. BLUE BADGE
-   - Travel, FAQ/visit copy and the Blue Badge ticket header state that a valid
-     Blue Badge must be displayed in the vehicle.
-
-5. TEST MODE RELEASES
-   - Preview/test mode now mounts the real customer-facing releases that are on
-     sale in Tito, instead of the old Test Wave ticket releases.
-   - Super Saver and Advance use the advertised 300 / 700 preview allocations;
-     Standard is the final band and is not given a fake public capacity counter.
-   - Pre-school, paid parking and Blue Badge parking are mounted alongside them.
-   - The Tito widget still loads its test_mode plugin, so preview purchases remain
-     test transactions.
-
-RETAINED FROM V19
+RETAINED FROM V21
 -----------------
-- Netlify/Tito availability caching and 30-second visible-tab refresh.
+- Activity-based Super Saver and Advance counting.
+- Standard reveal when the discounted allocations are exhausted.
+- Non-numeric pre-school header.
+- General/Blue Badge parking handling and sold-out messaging.
+- Real customer-facing releases in Tito test mode.
+- 30-second visible-tab availability refresh and server/CDN cache protection.
 - Mandatory order-reference verification and rate limiting on response writes.
-- wfd_responses metadata including travel preference.
-- Post-purchase warning that confirmation/ticket emails come from Tito.
+- `wfd_responses` metadata including likely travel method.
+- Post-purchase warning that ticket emails come from Tito.
 - Removal of the under-16 accompaniment restriction.
 
 TEST ON DEPLOY PREVIEW
 ----------------------
-1. Confirm the travel area has three cards: Walk, Bus and Parking.
-2. Click Walk and Parking anywhere on the card and confirm each visibly selects.
-3. Confirm Bus from Wotton and Bus from Charfield are independently selectable.
-4. Confirm Parking says that it does not reserve a space and that the number/type
-   of parking spaces must still be selected in the ticket list below.
-5. Confirm the ticket widget shows the real Super Saver ticket types in Tito's
-   ascending-age order, with Advance and Standard hidden until needed.
-6. Confirm the pre-school ticket is first and its header contains no capacity
-   number and no “parking options” wording.
-7. Confirm paid parking and Blue Badge parking appear after admission tickets.
-8. Confirm a valid Blue Badge requirement is visible with Blue Badge parking.
-9. Temporarily exhaust the general parking test allocation (or use a test release
-   state) and confirm the page clearly says general parking is sold out and
-   directs customers to walk or use the Wotton/Charfield buses.
-10. Complete a test purchase and confirm Tito checkout/payment remains unchanged.
-11. Confirm the post-purchase panel warns that confirmation/ticket emails come
-    from Tito.
-12. Inspect Tito registration metadata and confirm wfd_responses.travel is saved.
-
-IMPORTANT
----------
-If preview still cannot identify one of the real price bands, check the release
-names/slugs. V20 first uses any live release slugs already entered in
-integration-config-2026.mjs; otherwise it recognises releases containing
-“Super Saver”, “Advance” and “Standard” in their title/slug.
+1. Confirm the pre-school header contains no capacity figure and uses the new
+   “make sure they have a ticket” wording.
+2. Confirm the three travel cards read Walk / Bus / Driving.
+3. Click Driving anywhere on the card and confirm it highlights.
+4. Confirm the Driving card says parking must be booked below and includes the
+   Wotton Road / New Road warnings.
+5. Confirm the separate planning note says this is only demand-planning data and
+   customers do not need to report later changes of plan.
+6. Confirm Blue Badge parking still says a valid Blue Badge must be displayed.
+7. Repeat the v21 checks for Advance counting, Standard reveal and parking
+   availability.
+8. Complete a test purchase and confirm checkout/payment behaviour is unchanged.

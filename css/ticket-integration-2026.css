@@ -1063,3 +1063,5 @@ body.wfd-post-purchase-modal-open {
     padding-right: 14px;
   }
 }
+/* Keep horizontally scrollable price comparisons reachable from a keyboard. */
+.price-table-wrap:focus-visible { outline: 3px solid #FBC15C; outline-offset: 3px; }

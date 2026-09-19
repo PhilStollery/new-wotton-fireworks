@@ -170,7 +170,6 @@ window.FIREWORKS_EVENT = {
 (() => {
   const TRAVEL_KEY = 'wfdTravelPreference2026';
   const nativeFetch = window.fetch.bind(window);
-  const nativeSetInterval = window.setInterval.bind(window);
   let latestAvailability = null;
   let travelValue = '';
   let patchScheduled = false;
@@ -515,6 +514,7 @@ window.FIREWORKS_EVENT = {
     return Number.isFinite(n)?Math.max(0,n):null;
   }
   function remoteRemaining(group) {
+    if (group?.soldOut || group?.expired) return 0;
     if (!group || group.remainingKnown === false) return null;
     const n=Number(group.displayRemaining == null ? group.remaining : group.displayRemaining);
     if (!Number.isFinite(n)) return null;
@@ -708,13 +708,13 @@ window.FIREWORKS_EVENT = {
     const familyRows=ordered.map((item)=>`<tr><th scope="row">${escapeHtml(item.name)}</th><td class="price-money">${escapeHtml(item.prices['super-saver']||'—')}</td><td class="price-money">${escapeHtml(item.prices.advance||'—')}</td><td class="price-money">${escapeHtml(item.prices.standard||'—')}</td></tr>`).join('');
     const parking=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='parking');
     const parkingRows=(parking?.releaseDetails||[]).map((r)=>`<tr><th scope="row">${escapeHtml(cleanTicketTitle(r.title,parking.label))}</th><td class="price-money">${escapeHtml(money(r))}</td></tr>`).join('');
-    const admission=`<div class="price-table-wrap"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
-    const parkingTable=parkingRows?`<div class="price-extra-title">Parking tickets</div><div class="price-table-wrap"><table class="price-table parking-price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Price<small>150 spaces until sold out or 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${parkingRows}</tbody></table></div>`:'';
+    const admission=`<div class="price-table-wrap" role="region" aria-label="Admission prices: scroll horizontally to compare all prices" tabindex="0"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
+    const parkingTable=parkingRows?`<div class="price-extra-title">Parking tickets</div><div class="price-table-wrap" role="region" aria-label="Parking prices: scroll horizontally for details" tabindex="0"><table class="price-table parking-price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Price<small>150 spaces until sold out or 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${parkingRows}</tbody></table></div>`:'';
     const html=`${admission}${parkingTable}`;
     if(root.innerHTML!==html)root.innerHTML=html;
   }
 
-  function nextWaveFor(key){const w=latestAvailability?.waves||[];const i=waveIndex(key);return i>=0?w[i+1]||null:null;}
+  function nextWaveFor(key){const w=latestAvailability?.waves||[];const i=waveIndex(key);return i>=0?w.slice(i+1).find(group=>!group.soldOut&&!group.expired&&(remoteRemaining(group)==null||remoteRemaining(group)>0))||null:null;}
   function releaseMatchInNext(sourceRow,next){
     const current=groupByKey(sourceRow.dataset.wfdGroup); const source=releaseForRow(sourceRow); if(!current||!source||!next)return null;
     const key=familyKey(source.title,current.label); return (next.releaseDetails||[]).find((r)=>familyKey(r.title,next.label)===key)||null;
@@ -733,13 +733,16 @@ window.FIREWORKS_EVENT = {
     const mount=document.getElementById('tito-mount'); if(!mount)return;
     let el=mount.querySelector('.wfd-capacity-message');
     if(!el){el=document.createElement('div');el.className='wfd-capacity-message';mount.appendChild(el);}
+    // A transient limit hint must not dismiss an unacknowledged correction.
+    if(el.dataset.requiresAcknowledgement === 'true' && !el.hidden && !acknowledge)return;
+    el.dataset.requiresAcknowledgement = acknowledge ? 'true' : 'false';
     if(messageTimer){window.clearTimeout(messageTimer);messageTimer=null;}
     el.replaceChildren();
     if(!text){el.hidden=true;return;}
     const copy=document.createElement('span');copy.className='wfd-capacity-message-copy';copy.textContent=text;el.appendChild(copy);
     el.setAttribute('role',acknowledge?'alert':'status');el.setAttribute('aria-live',acknowledge?'assertive':'polite');
     if(acknowledge){
-      const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';button.addEventListener('click',()=>{el.hidden=true;});el.appendChild(button);
+      const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';button.addEventListener('click',()=>{el.dataset.requiresAcknowledgement='false';el.hidden=true;});el.appendChild(button);
     } else {
       messageTimer=window.setTimeout(()=>{el.hidden=true;messageTimer=null;},6500);
     }
@@ -772,7 +775,7 @@ window.FIREWORKS_EVENT = {
     const current=numericValue(control); const moved=Math.min(excess,current); if(!moved)return;
     notifyControl(control,Math.max(0,current-moved));
     const next=nextWaveFor(group.key);
-    if(next) window.setTimeout(()=>spillToNext(row,moved),0);
+    if(next && !eventExcess) window.setTimeout(()=>spillToNext(row,moved),0);
     else statusMessage(`${cleanTicketTitle(releaseForRow(row)?.title,group.label)} has been reduced to keep the order within the remaining event capacity.`,{acknowledge:true});
   }
 
@@ -825,6 +828,14 @@ window.FIREWORKS_EVENT = {
 
   function patchPresentation() {
     ensurePageStructure(); ensureTravelPlanningNote(); enhanceTravelCards();
+    if(!new URLSearchParams(location.search).has('tito')) {
+      document.querySelectorAll('.wfd-release-row input[type="number"],.wfd-release-row select').forEach(control=>{
+        const row=control.closest('.wfd-release-row');
+        if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row);
+        else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row);
+        else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control);
+      });
+    }
     allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); ensureTicketDescriptions(); alignQuantityControls(); renderPriceTable(); applyOrdinals();
     document.querySelector('.ticket-help')?.remove();
     const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v25-tito-email')){const p=document.createElement('p');p.className='wfd-v25-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
@@ -841,7 +852,6 @@ window.FIREWORKS_EVENT = {
     });
   }
 
-  window.setInterval=function(fn,delay,...args){const body=typeof fn==='function'?Function.prototype.toString.call(fn):'';if(Number(delay)===10000&&/refreshAvailability/.test(body))return nativeSetInterval(()=>{if(document.visibilityState!=='hidden')fn(...args);},30000);return nativeSetInterval(fn,delay,...args);};
 
   window.fetch=async function(input,init){
     if(typeof input==='string'&&input.startsWith('/api/ticket-availability')){

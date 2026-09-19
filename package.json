@@ -8,5 +8,13 @@
   },
   "dependencies": {
     "luxon": "3.7.2"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test --test-isolation=none tests/*.test.mjs",
+    "build": "node scripts/build.mjs"
   }
 }

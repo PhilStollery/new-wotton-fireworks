@@ -17,9 +17,33 @@ export function text(message, status = 200, headers = {}) {
   });
 }
 
-export async function readJson(request) {
+export async function readJson(request, maxBytes = 8192) {
+  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+    throw new HttpError(415, 'Content-Type must be application/json');
+  }
+  const reader = request.body?.getReader();
+  if (!reader) throw new HttpError(400, 'Invalid JSON body');
+  const chunks = [];
+  let size = 0;
   try {
-    return await request.json();
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new HttpError(413, 'Request is too large');
+      }
+      chunks.push(value);
+    }
+  } finally { reader.releaseLock(); }
+  try {
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    const body = JSON.parse(new TextDecoder().decode(bytes));
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Expected object');
+    return body;
   } catch {
     throw new HttpError(400, "Invalid JSON body");
   }

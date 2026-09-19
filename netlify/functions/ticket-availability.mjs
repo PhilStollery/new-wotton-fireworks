@@ -8,6 +8,8 @@ const UNBOUNDED_LOCAL_REMAINING = 1_000_000;
 let cachedPayload = null;
 let cachedAt = 0;
 let refreshInFlight = null;
+let retryAfter = 0;
+let lastFailure = null;
 
 export const config = {
   path: "/api/ticket-availability"
@@ -624,21 +626,40 @@ async function buildLiveAvailability(config) {
 }
 
 async function buildAvailabilityPayload(config) {
-  return config.isProduction ? buildLiveAvailability(config) : buildTestAvailability(config);
+  const payload = await (config.isProduction ? buildLiveAvailability(config) : buildTestAvailability(config));
+  const remaining = payload.admissionCapacity?.remaining;
+  if (Number.isFinite(remaining)) {
+    for (const group of [...payload.waves, ...payload.parkingGroups.filter(group => group.key === 'preschool')]) {
+      group.remaining = Math.min(group.remaining, remaining);
+      group.displayRemaining = group.remaining;
+      group.remainingKnown = true;
+      group.soldOut = group.soldOut || remaining <= 0;
+    }
+    if (payload.currentWave?.soldOut) payload.currentWave = null;
+  }
+  return {...payload, fetchedAt: new Date().toISOString(), stale: false};
 }
 
 async function cachedAvailabilityPayload(config) {
   const now = Date.now();
   if (cachedPayload && now - cachedAt < CACHE_TTL_MS) return cachedPayload;
+  if (now < retryAfter) {
+    if (cachedPayload && now - cachedAt < 5 * 60_000) return {...cachedPayload, stale: true};
+    throw lastFailure;
+  }
 
   if (!refreshInFlight) {
     refreshInFlight = buildAvailabilityPayload(config)
       .then((payload) => {
         cachedPayload = payload;
         cachedAt = Date.now();
+        retryAfter = 0;
+        lastFailure = null;
         return payload;
       })
       .catch((error) => {
+        lastFailure = error;
+        retryAfter = Date.now() + 30_000;
         if (cachedPayload && Date.now() - cachedAt < 5 * 60_000) {
           return { ...cachedPayload, stale: true };
         }
@@ -652,16 +673,17 @@ async function cachedAvailabilityPayload(config) {
   return refreshInFlight;
 }
 
-export default async () => {
+export default async (request) => {
+  if (request && request.method !== 'GET') return json({ok:false,error:'Method not allowed'},405,{Allow:'GET'});
   try {
     const config = getConfig();
     const payload = await cachedAvailabilityPayload(config);
 
     return json(payload, 200, {
-      "Netlify-CDN-Cache-Control": "public, durable, s-maxage=10, stale-while-revalidate=30"
+      "Netlify-CDN-Cache-Control": payload.stale ? "no-store" : "public, durable, s-maxage=10, stale-while-revalidate=30"
     });
   } catch (error) {
-    console.error("WFD ticket availability error", error?.status || 500, error?.message || error);
+    console.error("WFD ticket availability error", error?.status || 500);
     return toErrorResponse(error);
   }
 };

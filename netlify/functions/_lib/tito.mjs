@@ -31,10 +31,10 @@ export async function titoRequest(path, options = {}) {
   let body = null;
   try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
   if (!response.ok) {
-    const detail = body?.error || body?.message || `Tito API returned ${response.status}`;
     const mappedStatus = response.status === 429 ? 503 : (response.status >= 500 ? 502 : response.status);
-    throw new HttpError(mappedStatus, String(detail).slice(0, 240));
+    throw new HttpError(mappedStatus, 'The ticket provider could not complete that request.');
   }
+  if (!body || typeof body !== 'object') throw new HttpError(502, 'Invalid ticket provider response');
   return body;
 }
 

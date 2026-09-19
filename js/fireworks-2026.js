@@ -73,6 +73,36 @@
   let titoLifecycleReady = false;
   let quantityGuardCleanup = null;
   let availabilityTimer = null;
+  let availabilityRequest = null;
+  let availabilityFailures = 0;
+  let postPurchaseFlushPromise = null;
+
+  function availabilityNotice(message) {
+    let notice = document.getElementById('availability-health');
+    const mount = document.getElementById('tito-mount');
+    if (!mount) return;
+    if (!notice) { notice = document.createElement('p'); notice.id = 'availability-health'; notice.setAttribute('role','status'); mount.before(notice); }
+    notice.textContent = message;
+    notice.hidden = !message;
+  }
+
+  function scheduleAvailability() {
+    if (availabilityTimer) window.clearTimeout(availabilityTimer);
+    availabilityTimer = null;
+    if (document.hidden) return;
+    const delay = Math.min(120000, 30000 * (2 ** Math.min(availabilityFailures, 2)));
+    availabilityTimer = window.setTimeout(async () => {
+      availabilityTimer = null;
+      if (!registrationInProgress && !postPurchaseRegistration && !titoCheckoutRouteActive()) {
+        await refreshAvailability({allowWaveSwitch:true});
+      }
+      scheduleAvailability();
+    }, delay);
+  }
+  document.addEventListener('visibilitychange', scheduleAvailability);
+  window.addEventListener('online', () => {
+    if (!document.hidden && !registrationInProgress && !postPurchaseRegistration && !titoCheckoutRouteActive()) refreshAvailability({allowWaveSwitch:true}).finally(scheduleAvailability);
+  });
   let lastRequestedQuantity = 0;
   let visibleWaveKeys = [];
   let titoUiObserver = null;
@@ -277,13 +307,26 @@
   }
 
   async function fetchAvailability() {
-    const response = await fetch(`/api/ticket-availability?_=${Date.now()}`, {
-      headers: { accept: 'application/json' },
-      cache: 'no-store'
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.ok) throw new Error(result.error || 'Ticket availability is unavailable.');
-    return result;
+    if (availabilityRequest) return availabilityRequest;
+    availabilityRequest = (async () => {
+      try {
+        const response = await fetch('/api/ticket-availability', {
+          headers: {accept:'application/json'}, cache:'default', signal:AbortSignal.timeout(12000)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.ok) throw new Error('Ticket availability is temporarily unavailable. Please try again shortly.');
+        availabilityFailures = result.stale ? availabilityFailures + 1 : 0;
+        availabilityNotice(result.stale ? 'Availability is being refreshed. The figures shown may have changed; Tito will confirm your tickets before payment.' : '');
+        return result;
+      } catch (error) {
+        availabilityFailures += 1;
+        const loadingPrices = document.querySelector('#wfd-price-table .price-loading');
+        if (loadingPrices) loadingPrices.textContent = 'Prices could not be loaded. We will retry automatically.';
+        availabilityNotice('We cannot refresh availability right now. We will retry automatically; Tito confirms availability before payment.');
+        throw error;
+      }
+    })().finally(() => { availabilityRequest = null; });
+    return availabilityRequest;
   }
 
   function ensureTitoScript(testMode) {
@@ -291,6 +334,8 @@
     const script = document.createElement('script');
     const plugins = ['inline'];
     if (testMode) plugins.push('test_mode');
+    // Tito's documented local-only plugin; never enabled on a deployed hostname.
+    if (testMode && location.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(location.hostname)) plugins.push('development_mode');
     script.src = `https://js.tito.io/v2/with/${plugins.join(',')}`;
     script.async = true;
     script.dataset.titoWidget = 'true';
@@ -706,6 +751,7 @@
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
       keepalive: true,
+      signal: AbortSignal.timeout(12000),
       body: JSON.stringify({
         registrationSlug: snapshot.slug,
         reference: snapshot.reference,
@@ -717,7 +763,13 @@
     return result;
   }
 
-  async function flushPostPurchaseChoices() {
+  function flushPostPurchaseChoices() {
+    if (postPurchaseFlushPromise) return postPurchaseFlushPromise;
+    postPurchaseFlushPromise = performPostPurchaseFlush().finally(() => { postPurchaseFlushPromise = null; });
+    return postPurchaseFlushPromise;
+  }
+
+  async function performPostPurchaseFlush() {
     if (postPurchaseSaveInFlight) return;
     const entries = Object.entries(postPurchasePendingAnswers);
     if (!entries.length) return;
@@ -769,6 +821,13 @@
   }
 
   async function resetAfterPostPurchase({ scrollToTickets = false } = {}) {
+    if (postPurchaseSaveTimer) { window.clearTimeout(postPurchaseSaveTimer); postPurchaseSaveTimer = null; }
+    await flushPostPurchaseChoices();
+    if (Object.keys(postPurchasePendingAnswers).length) await flushPostPurchaseChoices();
+    if (Object.values(postPurchaseSaveStates).some(state => state === 'error')) {
+      availabilityNotice('Some choices have not been saved. Please retry the choices marked Not saved before leaving this panel.');
+      return;
+    }
     clearPendingPostPurchase();
     disposeFinishedTitoOverlay();
     finishedRegistration = null;
@@ -789,11 +848,7 @@
       if (availabilityState?.currentWave) createTitoWidget(availabilityState);
       else ticketPlaceholder('No tickets are available right now.', 'The booking panel will update if more tickets become available.');
 
-      if (!availabilityTimer) {
-        availabilityTimer = window.setInterval(() => {
-          refreshAvailability({ allowWaveSwitch: !registrationInProgress });
-        }, 10000);
-      }
+      scheduleAvailability();
     } catch (error) {
       ticketPlaceholder('Ticket availability could not be refreshed.', error.message);
     }
@@ -1264,7 +1319,9 @@
 
       groupMappings.forEach((mapping) => {
         const current = numericValue(mapping.control);
-        const effectiveMax = current + headroom;
+        const declaredMax = mapping.control.getAttribute('max');
+        const ticketMax = declaredMax !== null && declaredMax !== '' && Number.isFinite(Number(declaredMax)) ? Number(declaredMax) : Infinity;
+        const effectiveMax = Math.min(current + headroom, ticketMax);
         mapping.control.dataset.wfdSharedMax = String(effectiveMax);
         mapping.control.setAttribute('aria-valuemax', String(effectiveMax));
         markQuantityButtons(mapping);
@@ -1477,7 +1534,7 @@
     const mount = $('#tito-mount');
     const wave = state?.currentWave;
     if (!mount || !wave) {
-      ticketPlaceholder('No test tickets are available right now.', 'The page will update once the test allocation changes.');
+      ticketPlaceholder(state?.salesState === 'not_open' ? 'Tickets are not on sale yet.' : 'No tickets are available right now.', 'The booking panel updates automatically. Please check back shortly.');
       return;
     }
 
@@ -1488,7 +1545,7 @@
     const catalog = releaseCatalog(state).filter((release) => release.slug);
     const releases = catalog.map((release) => release.slug);
     if (!releases.length) {
-      ticketPlaceholder('Test tickets are not configured yet.', 'Check the test Activity names in integration-config-2026.mjs.');
+      ticketPlaceholder('Ticket booking is temporarily unavailable.', 'Please try again shortly or contact the organisers.');
       return;
     }
 
@@ -1519,6 +1576,7 @@
       const previousKey = availabilityState?.currentWave?.key || null;
       const nextKey = next?.currentWave?.key || null;
       availabilityState = next;
+      if (!registrationInProgress && !postPurchaseRegistration && !$('#tito-mount tito-widget') && next.currentWave) createTitoWidget(next);
 
       // Before Tito has rendered its rows, keep the single loading/availability
       // header useful. Once per-group counters exist they own the display.
@@ -1554,20 +1612,17 @@
       return;
     }
 
-    ticketPlaceholder('Connecting the test ticket allocation…', 'This deploy preview is using the live page design with controlled test tickets.');
+    ticketPlaceholder('Checking ticket availability…', 'Please wait while we load the current tickets and prices.');
 
     try {
       availabilityState = await fetchAvailability();
       renderAvailability(availabilityState.currentWave);
       createTitoWidget(availabilityState);
 
-      if (!availabilityTimer) {
-        availabilityTimer = window.setInterval(() => {
-          refreshAvailability({ allowWaveSwitch: !registrationInProgress });
-        }, 10000);
-      }
+      scheduleAvailability();
     } catch (error) {
-      ticketPlaceholder('Ticket testing is not connected yet.', error.message);
+      ticketPlaceholder('Ticket booking is temporarily unavailable.', 'We will retry automatically. Please check your connection or try again shortly.');
+      scheduleAvailability();
     }
   }
 

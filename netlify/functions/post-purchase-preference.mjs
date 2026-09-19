@@ -41,10 +41,17 @@ export default async (request) => {
   if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
 
   try {
+    const origin = request.headers.get('origin');
+    if ((origin && origin !== new URL(request.url).origin) || request.headers.get('sec-fetch-site') === 'cross-site') {
+      throw new HttpError(403, 'Cross-origin request not allowed');
+    }
     const declaredLength = Number(request.headers.get("content-length") || 0);
     if (declaredLength > 8_192) throw new HttpError(413, "Request is too large");
 
     const { registrationSlug, reference, stage, value, answers } = await readJson(request);
+    if (typeof registrationSlug !== 'string' || typeof reference !== 'string') {
+      throw new HttpError(400, 'Booking details are invalid');
+    }
     const slug = String(registrationSlug || "").trim();
     const suppliedReference = String(reference || "").trim();
 
@@ -61,7 +68,7 @@ export default async (request) => {
       throw new HttpError(400, "Invalid preference choices");
     }
     for (const [nextStage, nextValue] of updates) {
-      if (!allowed[nextStage]?.has(nextValue)) throw new HttpError(400, "Invalid preference choice");
+      if (!Object.hasOwn(allowed, nextStage) || !allowed[nextStage].has(nextValue)) throw new HttpError(400, "Invalid preference choice");
     }
 
     const registration = await getRegistration(slug);
@@ -97,7 +104,8 @@ export default async (request) => {
       saved: Object.fromEntries(updates)
     });
   } catch (error) {
-    console.error("WFD post-purchase preference error", error?.status || 500, error?.message || error);
+    // Do not log upstream error text: it can contain booking/customer details.
+    if (!error?.status || error.status >= 500) console.error("WFD post-purchase preference error", error?.status || 500);
     return toErrorResponse(error);
   }
 };

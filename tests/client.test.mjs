@@ -77,6 +77,32 @@ test('zero quantity inputs remain valid after automatic correction',async()=>{
     assert.equal(input.min,'0');assert.equal(input.validationMessage,'');
   }finally{t.dom.window.close();}
 });
+test('native quantity maximum is enforced and Continue waits for acknowledgement',async()=>{
+  const t=await setup();try{
+    const payload=data(500);
+    payload.waves[0].remaining=300;
+    payload.waves[0].displayRemaining=300;
+    payload.admissionCapacity.remaining=500;
+    t.setPayload(payload);
+    await t.w.fetch('/api/ticket-availability');
+    await t.settle();
+    rows(t);
+    const mount=t.w.document.querySelector('#tito-mount');
+    mount.insertAdjacentHTML('beforeend','<div class="tito-widget-form"><div class="tito-form-actions"><button type="button">Continue</button></div></div>');
+    const input=t.w.document.querySelector('[data-wfd-release="super"] input');
+    input.max='100';input.value='290';
+    input.dispatchEvent(new t.w.Event('input',{bubbles:true}));await t.settle();
+    assert.equal(input.value,'100');assert.equal(input.validity.rangeOverflow,false);
+    const warning=t.w.document.querySelector('.wfd-capacity-message[data-requires-acknowledgement="true"]');assert.ok(warning);
+    const proceed=t.w.document.querySelector('.tito-form-actions button');
+    assert.ok(proceed.classList.contains('wfd-awaiting-ack'));assert.equal(proceed.getAttribute('aria-disabled'),'true');
+    let downstream=0;proceed.addEventListener('click',()=>downstream++);
+    proceed.click();assert.equal(downstream,0);
+    warning.querySelector('button').click();await t.settle();
+    assert.ok(!proceed.classList.contains('wfd-awaiting-ack'));assert.notEqual(proceed.getAttribute('aria-disabled'),'true');
+    proceed.click();assert.equal(downstream,1);
+  }finally{t.dom.window.close();}
+});
 test('event overflow is reduced rather than transferred to a more expensive band',async()=>{
   const t=await setup();try{
     rows(t);const input=t.w.document.querySelector('[data-wfd-release="super"] input');input.value='5';input.dispatchEvent(new t.w.Event('input',{bubbles:true}));await t.settle();

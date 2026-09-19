@@ -248,6 +248,15 @@ window.FIREWORKS_EVENT = {
       .ticket-step-head p{margin:0;color:rgba(255,255,255,.76);font-size:.9rem;line-height:1.5}
       .ticket-step-panel .ticket-box{margin:0!important;border-radius:13px!important;box-shadow:none!important;background:#20201e!important;color:#fff!important;border:1px solid #4c4c45!important;padding:0!important;overflow:hidden!important}
       .ticket-step-panel .ticket-selector-shell{width:100%!important;max-width:none!important;margin:0!important;background:#20201e!important}
+      .ticket-step-panel #tito-mount,
+      .ticket-step-panel #tito-mount tito-widget,
+      .ticket-step-panel #tito-mount tito-widget>div,
+      .ticket-step-panel #tito-mount tito-widget form,
+      .ticket-step-panel #tito-mount tito-widget form>div,
+      .ticket-step-panel #tito-mount .tito-widget,
+      .ticket-step-panel #tito-mount .tito-widget>div,
+      .ticket-step-panel #tito-mount .tito-widget-form,
+      .ticket-step-panel #tito-mount .tito-widget-form>div{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
 
       /* Location/support notices are secondary information within Step 1. */
       .ticket-step-panel .location-check-card{margin:0!important;padding:11px 38px 11px 13px!important;background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:11px!important;color:#fff!important}
@@ -302,6 +311,7 @@ window.FIREWORKS_EVENT = {
       #tito-mount .tito-widget-form .tito-form-actions button:disabled,
       #tito-mount .tito-widget-form .tito-form-actions input[type="submit"]:disabled,
       #tito-mount .tito-widget-form .tito-form-actions [aria-disabled="true"]{background:#666760!important;border-color:#666760!important;color:#D8D8D2!important;cursor:not-allowed!important;opacity:1!important}
+      #tito-mount .tito-widget-form .tito-form-actions .wfd-awaiting-ack{background:#666760!important;border-color:#666760!important;color:#D8D8D2!important;cursor:not-allowed!important;opacity:1!important}
       .ticket-help{display:none!important}
       .wfd-v25-tito-email{margin-top:.55rem;font-size:.92rem}
 
@@ -321,7 +331,8 @@ window.FIREWORKS_EVENT = {
       #tito-mount .wfd-capacity-message-ack:hover,#tito-mount .wfd-capacity-message-ack:focus-visible{filter:brightness(.96);outline:2px solid #fff;outline-offset:2px}
 
       /* FAQ is one rounded panel with clear disclosure triangles rather than +/- controls. */
-      .faq-list{position:relative!important;overflow:hidden!important;border:1px solid #54544c!important;border-radius:16px!important;background:#292925!important}
+      .faq-wrap{max-width:none!important;width:100%!important}
+      .faq-list{position:relative!important;overflow:hidden!important;width:100%!important;border:1px solid #54544c!important;border-radius:16px!important;background:#292925!important}
       .faq-list::after{content:""!important;display:block!important;position:absolute!important;top:14px!important;right:14px!important;width:27px!important;height:27px!important;background:url('/images/2026/rtgbi-roundel-white.png') center/contain no-repeat!important;opacity:.68!important;pointer-events:none!important;z-index:3!important}
       .faq-list details{position:relative!important;overflow:visible!important;border:0!important;border-bottom:1px solid #54544c!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
       .faq-list details:last-child{border-bottom:0!important}
@@ -710,7 +721,8 @@ window.FIREWORKS_EVENT = {
     });
     const preschool=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='preschool');
     const preschoolRelease=(preschool?.releaseDetails||[])[0]||null;
-    const preschoolRow=preschoolRelease?`<tr class="preschool-row"><th scope="row">${escapeHtml(cleanTicketTitle(preschoolRelease.title,preschool.label)||'Pre-school')}</th><td class="price-money price-span" colspan="3">${escapeHtml(money(preschoolRelease))}</td></tr>`:'';
+    const preschoolPrice=preschoolRelease?escapeHtml(money(preschoolRelease)):'';
+    const preschoolRow=preschoolRelease?`<tr class="preschool-row"><th scope="row">${escapeHtml(cleanTicketTitle(preschoolRelease.title,preschool.label)||'Pre-school')}</th><td class="price-money">${preschoolPrice}</td><td class="price-money">${preschoolPrice}</td><td class="price-money">${preschoolPrice}</td></tr>`:'';
     const familyRows=ordered.map((item)=>`<tr><th scope="row">${escapeHtml(item.name)}</th><td class="price-money">${escapeHtml(item.prices['super-saver']||'—')}</td><td class="price-money">${escapeHtml(item.prices.advance||'—')}</td><td class="price-money">${escapeHtml(item.prices.standard||'—')}</td></tr>`).join('');
     const parking=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='parking');
     const parkingRows=(parking?.releaseDetails||[]).map((r)=>`<tr><th scope="row">${escapeHtml(cleanTicketTitle(r.title,parking.label))}</th><td class="price-money">${escapeHtml(money(r))}</td></tr>`).join('');
@@ -726,7 +738,13 @@ window.FIREWORKS_EVENT = {
     const key=familyKey(source.title,current.label); return (next.releaseDetails||[]).find((r)=>familyKey(r.title,next.label)===key)||null;
   }
   function setControl(control,value){
-    const next=Math.max(0,Math.floor(Number(value)||0)); if(!control)return;
+    if(!control)return;
+    let next=Math.max(0,Math.floor(Number(value)||0));
+    if(control.tagName!=='SELECT'){
+      const rawMax=control.getAttribute('max');
+      const nativeMax=rawMax==null?null:Number(rawMax);
+      if(Number.isFinite(nativeMax))next=Math.min(next,Math.max(0,Math.floor(nativeMax)));
+    }
     if(control.tagName==='SELECT'){
       const nums=[...control.options].map((o)=>Number(o.value)).filter(Number.isFinite).sort((a,b)=>a-b);
       const allowed=nums.filter((n)=>n<=next).pop();
@@ -753,10 +771,55 @@ window.FIREWORKS_EVENT = {
     }
     if(flash){control.classList.remove('wfd-needs-reduction');control.classList.add('wfd-auto-adjusted');window.setTimeout(()=>control.classList.remove('wfd-auto-adjusted'),1600);}
   }
+  function controlMaximum(control){
+    if(!control||control.tagName==='SELECT')return null;
+    const raw=control.getAttribute('max');
+    if(raw==null||raw==='')return null;
+    const value=Number(raw);
+    return Number.isFinite(value)?Math.max(0,Math.floor(value)):null;
+  }
+
+  function enforceNativeQuantityBounds(control,row,{nativeEventInFlight=false}={}){
+    const max=controlMaximum(control);
+    const current=numericValue(control);
+    if(max==null||current<=max)return false;
+    notifyControl(control,max,{nativeEventInFlight});
+    statusMessage(`This ticket quantity has been reduced to ${max}, the maximum allowed for a single ticket type.`,{acknowledge:true,anchor:row});
+    return true;
+  }
+
   function normaliseQuantityValidity(){
     document.querySelectorAll('#tito-mount .wfd-release-row input[type="number"]').forEach((control)=>{
       if(numericValue(control)===0 && Number(control.getAttribute('min'))>0) control.setAttribute('min','0');
       control.setCustomValidity?.('');
+    });
+  }
+
+  function activeAcknowledgementMessages(){
+    return [...document.querySelectorAll('#tito-mount .wfd-capacity-message[data-requires-acknowledgement="true"]')]
+      .filter((el)=>el.isConnected&&!el.hidden);
+  }
+
+  function syncCheckoutAcknowledgementState(){
+    const pending=activeAcknowledgementMessages().length>0;
+    const controls=[...document.querySelectorAll('#tito-mount button,#tito-mount input[type="submit"],#tito-mount a,#tito-mount [role="button"]')]
+      .filter((control)=>!control.classList.contains('wfd-capacity-message-ack')&&checkoutIntent(control));
+    controls.forEach((control)=>{
+      control.classList.toggle('wfd-awaiting-ack',pending);
+      if(pending){
+        if(control.dataset.wfdAckLocked!=='true'){
+          control.dataset.wfdAckLocked='true';
+          control.dataset.wfdAckHadAriaDisabled=control.hasAttribute('aria-disabled')?'true':'false';
+          control.dataset.wfdAckPreviousAriaDisabled=control.getAttribute('aria-disabled')||'';
+        }
+        control.setAttribute('aria-disabled','true');
+      }else if(control.dataset.wfdAckLocked==='true'){
+        if(control.dataset.wfdAckHadAriaDisabled==='true')control.setAttribute('aria-disabled',control.dataset.wfdAckPreviousAriaDisabled||'true');
+        else control.removeAttribute('aria-disabled');
+        delete control.dataset.wfdAckLocked;
+        delete control.dataset.wfdAckHadAriaDisabled;
+        delete control.dataset.wfdAckPreviousAriaDisabled;
+      }
     });
   }
 
@@ -779,10 +842,11 @@ window.FIREWORKS_EVENT = {
       const copy=document.createElement('span');copy.className='wfd-capacity-message-copy';copy.textContent=text;el.appendChild(copy);
       el.setAttribute('role','alert');el.setAttribute('aria-live','assertive');
       const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';
-      button.addEventListener('click',()=>el.remove());
+      button.addEventListener('click',()=>{el.remove();syncCheckoutAcknowledgementState();});
       el.appendChild(button);
       placeAcknowledgementMessage(el,anchor,mount);
       el.hidden=false;
+      syncCheckoutAcknowledgementState();
       return el;
     }
 
@@ -808,9 +872,13 @@ window.FIREWORKS_EVENT = {
     setGroupVisible(next.key,true);
     const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(targetRelease.slug))}"]`); const control=row?.querySelector('input[type="number"],select');
     if(!control){if(attempt<8)window.setTimeout(()=>spillToNext(sourceRow,quantity,attempt+1),50);return false;}
-    notifyControl(control,numericValue(control)+quantity);
-    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`,{acknowledge:true,anchor:sourceRow});
-    schedulePatch(); return true;
+    const before=numericValue(control);
+    notifyControl(control,before+quantity);
+    const accepted=Math.max(0,numericValue(control)-before);
+    if(accepted>0)statusMessage(`${accepted} ${accepted===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`,{acknowledge:true,anchor:sourceRow});
+    const remainder=Math.max(0,quantity-accepted);
+    if(remainder>0)window.setTimeout(()=>spillToNext(row,remainder),0);
+    schedulePatch(); return accepted>0;
   }
 
   function incrementIntent(button){const t=String([button?.textContent,button?.getAttribute?.('aria-label'),button?.getAttribute?.('title'),button?.className].filter(Boolean).join(' ')).toLowerCase();return t.trim()==='+'||/(^|\s)(add|plus|increase|increment)(\s|$)/.test(t);}
@@ -851,8 +919,17 @@ window.FIREWORKS_EVENT = {
   function installSpillHandlers() {
     if(spillHandlersInstalled)return; spillHandlersInstalled=true;
     document.addEventListener('click',(event)=>{
-      const button=event.target?.closest?.('button,a,[role="button"]'); if(!button)return;
-      if(document.getElementById('tito-mount')?.contains(button) && checkoutIntent(button)){normaliseQuantityValidity();return;}
+      const button=event.target?.closest?.('button,a,input[type="submit"],[role="button"]'); if(!button)return;
+      if(document.getElementById('tito-mount')?.contains(button) && checkoutIntent(button)){
+        const pending=activeAcknowledgementMessages();
+        if(pending.length){
+          event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();
+          pending[0].querySelector('.wfd-capacity-message-ack')?.focus();
+          syncCheckoutAcknowledgementState();
+          return;
+        }
+        normaliseQuantityValidity();return;
+      }
       if(!incrementIntent(button))return;
       const row=button.closest('.wfd-release-row'); if(!row)return;
       if(row.dataset.wfdGroupKind==='admission'){
@@ -866,6 +943,7 @@ window.FIREWORKS_EVENT = {
     const onControl=(event)=>{
       if(autoAdjusting){schedulePatch();return;}
       const control=event.target; const row=control?.closest?.('.wfd-release-row'); if(!row)return;
+      enforceNativeQuantityBounds(control,row,{nativeEventInFlight:true});
       if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row,{nativeEventInFlight:true}); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row,{nativeEventInFlight:true}); else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control,row,{nativeEventInFlight:true});
       schedulePatch();
     };
@@ -883,12 +961,13 @@ window.FIREWORKS_EVENT = {
     if(!new URLSearchParams(location.search).has('tito')) {
       document.querySelectorAll('.wfd-release-row input[type="number"],.wfd-release-row select').forEach(control=>{
         const row=control.closest('.wfd-release-row');
+        enforceNativeQuantityBounds(control,row);
         if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row);
         else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row);
         else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control,row);
       });
     }
-    allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); ensureTicketDescriptions(); alignQuantityControls(); normaliseQuantityValidity(); renderPriceTable(); applyOrdinals();
+    allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); ensureTicketDescriptions(); alignQuantityControls(); normaliseQuantityValidity(); renderPriceTable(); applyOrdinals(); syncCheckoutAcknowledgementState();
     document.querySelector('.ticket-help')?.remove();
     const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v25-tito-email')){const p=document.createElement('p');p.className='wfd-v25-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
   }

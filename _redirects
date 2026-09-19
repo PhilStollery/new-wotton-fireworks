@@ -8,9 +8,9 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 /privacy /privacy.html 200
 
 # Netlify function routes used by the public site/testing
+# ticket-availability and post-purchase-preference now declare their /api paths
+# in the function config so Netlify can apply caching/rate-limiting correctly.
 /api/integration-health /.netlify/functions/integration-health 200
-/api/ticket-availability /.netlify/functions/ticket-availability 200
-/api/post-purchase-preference /.netlify/functions/post-purchase-preference 200
 
 # Friendly source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
 /go/bluecoat /index.html 200

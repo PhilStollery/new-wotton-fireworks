@@ -18,8 +18,6 @@ export function getConfig() {
     isProduction: mode === "live",
     automationEnabled: Boolean(integration.features.priceAutomationEnabled),
     tito: {
-      // Only Netlify's real production context can ever select the live token.
-      // Deploy Previews, branch deploys and local development always use test.
       apiToken: mode === "live"
         ? (process.env.TITO_API_TOKEN_LIVE || "")
         : (process.env.TITO_API_TOKEN_TEST || ""),
@@ -49,6 +47,20 @@ export function getConfig() {
 export function configurationStatus(config = getConfig()) {
   const tokenName = config.isProduction ? "TITO_API_TOKEN_LIVE" : "TITO_API_TOKEN_TEST";
   const requiredForApi = [[tokenName, config.tito.apiToken]];
+  const requiredForLiveTicketing = [
+    ...requiredForApi,
+    ["live.eventCapacityActivityId", config.tito.activities.eventCapacity],
+    ["live.superSaverActivityId", config.tito.activities.superSaver],
+    ["live.advanceActivityId", config.tito.activities.advance],
+    ["live.parkingCapacityActivityId", config.tito.activities.parkingCapacity],
+    ["live.generalParkingActivityId", config.tito.activities.generalParking],
+    ["live.superSaverReleases", config.tito.releases.superSaver.length],
+    ["live.advanceReleases", config.tito.releases.advance.length],
+    ["live.standardReleases", config.tito.releases.standard.length],
+    ["live.preschoolRelease", config.tito.releases.preschool],
+    ["live.paidParkingRelease", config.tito.releases.paidParking],
+    ["live.blueBadgeParkingRelease", config.tito.releases.blueBadgeParking]
+  ];
   const requiredForAutomation = [
     ...requiredForApi,
     ["live.superSaverActivityId", config.tito.activities.superSaver],
@@ -61,6 +73,7 @@ export function configurationStatus(config = getConfig()) {
   const missing = (items) => items.filter(([, value]) => !value).map(([key]) => key);
   return {
     api: missing(requiredForApi),
+    liveTicketing: missing(requiredForLiveTicketing),
     automation: missing(requiredForAutomation)
   };
 }

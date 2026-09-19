@@ -2,25 +2,38 @@ import { getConfig } from "./config.mjs";
 import { HttpError } from "./http.mjs";
 
 const API = "https://api.tito.io/v3";
+const TITO_TIMEOUT_MS = 8_000;
 
 export async function titoRequest(path, options = {}) {
   const config = getConfig();
   if (!config.tito.apiToken) throw new HttpError(503, "Tito API token is not configured");
-  const response = await fetch(`${API}${path}`, {
-    method: options.method || "GET",
-    headers: {
-      Authorization: `Token token=${config.tito.apiToken}`,
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {})
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      method: options.method || "GET",
+      headers: {
+        Authorization: `Token token=${config.tito.apiToken}`,
+        Accept: "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(options.timeoutMs || TITO_TIMEOUT_MS)
+    });
+  } catch (error) {
+    if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+      throw new HttpError(504, "Tito API timed out");
+    }
+    throw new HttpError(502, "Tito API could not be reached");
+  }
+
   const raw = await response.text();
   let body = null;
   try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
   if (!response.ok) {
     const detail = body?.error || body?.message || `Tito API returned ${response.status}`;
-    throw new HttpError(response.status >= 500 ? 502 : response.status, String(detail).slice(0, 240));
+    const mappedStatus = response.status === 429 ? 503 : (response.status >= 500 ? 502 : response.status);
+    throw new HttpError(mappedStatus, String(detail).slice(0, 240));
   }
   return body;
 }
@@ -59,6 +72,11 @@ export async function getActivities(eventSlug) {
 export async function getActivity(id, eventSlug) {
   const body = await titoRequest(`${eventBase(eventSlug)}/activities/${encodeURIComponent(id)}`);
   return body?.activity;
+}
+
+export async function getReleases(eventSlug) {
+  const body = await titoRequest(`${eventBase(eventSlug)}/releases?page[size]=1000`);
+  return body?.releases || [];
 }
 
 export async function getRelease(slug) {

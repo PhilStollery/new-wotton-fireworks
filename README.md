@@ -1,61 +1,18 @@
-# Wotton-under-Edge Firework Display 2026
+# Wotton-under-Edge Firework Display 2026 — v19
 
-Current development package: v13.
+V19 is a cumulative launch-preparation package. It deliberately leaves the established `js/fireworks-2026.js` checkout implementation untouched.
 
-## Ticketing
+It adds:
 
-Tito remains the system of record for checkout, payment, confirmation emails, ticket QR codes and gate check-in.
+- shared Netlify/Tito availability caching and reduced visible-tab polling;
+- mandatory booking-reference verification and rate limiting for post-purchase writes;
+- a clean `wfd_responses` metadata namespace;
+- travel preference capture from the existing travel cards;
+- a standalone pre-school ticket reminder;
+- explicit general-parking sold-out messaging and separate Blue Badge messaging;
+- support for Super Saver → Advance → Standard front-end reveal while all Tito releases can remain available;
+- a post-purchase warning that confirmation/ticket emails come from Tito;
+- removal of the under-16 accompaniment restriction from the public FAQ and ticket terms;
+- a production availability implementation ready for the existing live Activity/release configuration fields.
 
-The website adds:
-
-- the embedded Tito selector;
-- live shared-capacity counters for each price band;
-- local quantity limits and progressive reveal of later price bands;
-- source tracking and beneficiary messaging;
-- a post-checkout follow-up panel which stores optional choices against the completed Tito registration.
-
-There is no custom confirmation email, group QR or gate application.
-
-## Post-checkout follow-up
-
-After Tito reports `registration:finished`:
-
-1. the private `tito` checkout parameter is removed from the public URL;
-2. Tito's completed-order panel remains visible;
-3. when the purchaser dismisses that panel, the ticket selector is replaced by a Wotton follow-up panel;
-4. each choice saves immediately to `registration.metadata.wfd_preferences`;
-5. the purchaser can then plan their visit or reopen a fresh ticket selector to make another booking.
-
-The follow-up includes:
-
-- an invitation to the booked climbing / bouldering social, with limited places;
-- an RSVP for the four-club meet-and-greet at Beermongery.Inc, 40 Long St, Wotton-under-Edge, Friday 13 November 2026 at 8pm;
-- cancellation donation/refund preference;
-- separate consent to hear when 2027 fireworks tickets go on sale;
-- separate consent to hear about other Round Table/community events.
-
-Meet-and-greet and climbing responses are recorded against the fireworks booking rather than creating another Tito ticket.
-
-## Configuration
-
-Ordinary configuration lives in:
-
-`netlify/functions/_lib/integration-config-2026.mjs`
-
-The only Netlify secrets required are:
-
-- `TITO_API_TOKEN_TEST`
-- `TITO_API_TOKEN_LIVE`
-
-Deploy Previews and branch deploys use the test token. Only Netlify production can select the live token.
-
-## Public contact details
-
-- Email: `help@wotton-firework-display.co.uk`
-- Facebook: `https://www.facebook.com/wotton.fireworks`
-
-## Entrance
-
-All attendees use the Wotton Community Sports Centre entrance on Wotton Road, whether arriving on foot, by car or on the event bus. Other site accesses are emergency-only.
-
-See `docs/integration.md` for implementation and testing notes.
+Tito remains the system of record for checkout, payment, ticket QR codes, confirmation emails and gate check-in.

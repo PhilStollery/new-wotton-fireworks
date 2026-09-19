@@ -226,7 +226,8 @@ window.FIREWORKS_EVENT = {
       .price-matrix-card{margin-top:20px;border:1px solid #54544c;border-radius:16px;background:#292925;padding:18px 18px 14px}
       .price-table-wrap{overflow-x:auto;padding-top:4px}
       .price-table{width:100%;border-collapse:collapse;min-width:680px;color:#fff;font-size:.88rem}
-      .price-table th,.price-table td{padding:10px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid #4c4c45}
+      .price-table th,.price-table td{padding:10px 12px;text-align:center;vertical-align:middle;border-bottom:1px solid #4c4c45}
+      .price-table th:first-child,.price-table td:first-child{text-align:left}
       .price-table thead th{font-size:.8rem;color:#fff;background:transparent}
       .price-table thead th small{display:block;margin-top:4px;color:rgba(255,255,255,.72);font-size:.69rem;line-height:1.35;font-weight:600;text-transform:none;letter-spacing:0}
       .price-table tbody th{font-weight:800;color:#fff;white-space:nowrap}
@@ -239,24 +240,24 @@ window.FIREWORKS_EVENT = {
       .price-loading{padding:18px 0;color:rgba(255,255,255,.72)}
 
       /* Tickets are three matching dark panels. */
-      .ticket-steps{display:grid;gap:18px}
+      .ticket-steps{display:grid;gap:12px}
       .ticket-step-panel,.ticket-step-panel.step-get-tickets{border:1px solid #54544c!important;border-radius:18px!important;padding:clamp(20px,3vw,30px)!important;background:#292925!important;color:#fff!important}
       .ticket-step-head{margin-bottom:16px;padding-right:42px}
       .ticket-step-label{margin:0 0 4px;color:#FBC15C;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
       .ticket-step-head h3{margin:0 0 5px;color:#fff;font-size:clamp(1.3rem,2.2vw,1.72rem)}
       .ticket-step-head p{margin:0;color:rgba(255,255,255,.76);font-size:.9rem;line-height:1.5}
       .ticket-step-panel .ticket-box{margin:0!important;border-radius:13px!important;box-shadow:none!important;background:#20201e!important;color:#fff!important;border:1px solid #4c4c45!important;padding:0!important;overflow:hidden!important}
-      .ticket-selector-shell{background:#20201e!important}
+      .ticket-step-panel .ticket-selector-shell{width:100%!important;max-width:none!important;margin:0!important;background:#20201e!important}
 
       /* Location/support notices are secondary information within Step 1. */
       .ticket-step-panel .location-check-card{margin:0!important;padding:11px 38px 11px 13px!important;background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:11px!important;color:#fff!important}
       .ticket-step-panel .location-check-card>span{display:none!important}
       .ticket-step-panel .location-check-card strong{font-size:.88rem!important;color:#fff!important}
       .ticket-step-panel .location-check-card p{margin:.16rem 0 0!important;color:rgba(255,255,255,.7)!important;font-size:.8rem!important}
-      .ticket-step-panel .source-support-card{margin:10px 0 0!important;padding:10px 38px 10px 13px!important;background:transparent!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:11px!important;color:#fff!important;box-shadow:none!important}
+      .ticket-step-panel .source-support-card{margin:10px 0 0!important;padding:11px 38px 11px 13px!important;background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:11px!important;color:#fff!important;box-shadow:none!important}
       .ticket-step-panel .source-support-card .support-mark{display:none!important}
-      .ticket-step-panel .source-support-card strong{font-size:.84rem!important;color:rgba(255,255,255,.9)!important}
-      .ticket-step-panel .source-support-card p{margin:.15rem 0 0!important;color:rgba(255,255,255,.64)!important;font-size:.78rem!important}
+      .ticket-step-panel .source-support-card strong{font-size:.88rem!important;color:#fff!important}
+      .ticket-step-panel .source-support-card p{margin:.16rem 0 0!important;color:rgba(255,255,255,.7)!important;font-size:.8rem!important}
 
       /* Travel planning is optional. Keep choices aligned at the bottom. */
       #travel-choices.travel-strip{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0!important;align-items:stretch!important}
@@ -296,6 +297,11 @@ window.FIREWORKS_EVENT = {
       #tito-mount input.wfd-needs-reduction,#tito-mount select.wfd-needs-reduction{outline:3px solid #FF8C7C!important;outline-offset:2px!important;background:#FFF0ED!important}
       #tito-mount input.wfd-auto-adjusted,#tito-mount select.wfd-auto-adjusted{outline:3px solid #FBC15C!important;outline-offset:2px!important}
       #tito-mount .tito-widget-form .tito-form-actions{background:#20201e!important;border-color:#4c4c45!important}
+      #tito-mount .tito-widget-form .tito-form-actions button,
+      #tito-mount .tito-widget-form .tito-form-actions input[type="submit"]{background:var(--yellow)!important;border-color:var(--yellow)!important;color:var(--grey)!important;opacity:1!important}
+      #tito-mount .tito-widget-form .tito-form-actions button:disabled,
+      #tito-mount .tito-widget-form .tito-form-actions input[type="submit"]:disabled,
+      #tito-mount .tito-widget-form .tito-form-actions [aria-disabled="true"]{background:#666760!important;border-color:#666760!important;color:#D8D8D2!important;cursor:not-allowed!important;opacity:1!important}
       .ticket-help{display:none!important}
       .wfd-v25-tito-email{margin-top:.55rem;font-size:.92rem}
 
@@ -304,12 +310,12 @@ window.FIREWORKS_EVENT = {
       #tito-mount .wfd-group-counter>strong:not(.wfd-v26-counter-title),
       #tito-mount .wfd-group-counter>span:not(.wfd-v26-counter-status){visibility:hidden!important}
 
-      /* Keep adjoining dark sections visually connected without a large dead zone. */
-      #tickets.section{padding-bottom:44px!important}
-      #visit.section{padding-top:44px!important}
+      /* Keep adjoining dark sections visually connected without large dead zones. */
+      #whats-on.section,#prices.section,#tickets.section,#visit.section,#faq.section{padding-top:32px!important;padding-bottom:32px!important}
 
       /* Capacity corrections remain visible until the customer acknowledges them. */
       #tito-mount .wfd-capacity-message{display:flex;align-items:center;justify-content:space-between;gap:14px}
+      #tito-mount .wfd-capacity-message.wfd-capacity-message-inline{margin:0 20px 12px!important}
       #tito-mount .wfd-capacity-message-copy{min-width:0}
       #tito-mount .wfd-capacity-message-ack{flex:0 0 auto;appearance:none;border:1px solid #FBC15C;background:#FBC15C;color:#1D1D1A;border-radius:999px;padding:.38rem .72rem;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
       #tito-mount .wfd-capacity-message-ack:hover,#tito-mount .wfd-capacity-message-ack:focus-visible{filter:brightness(.96);outline:2px solid #fff;outline-offset:2px}
@@ -708,7 +714,7 @@ window.FIREWORKS_EVENT = {
     const familyRows=ordered.map((item)=>`<tr><th scope="row">${escapeHtml(item.name)}</th><td class="price-money">${escapeHtml(item.prices['super-saver']||'—')}</td><td class="price-money">${escapeHtml(item.prices.advance||'—')}</td><td class="price-money">${escapeHtml(item.prices.standard||'—')}</td></tr>`).join('');
     const parking=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='parking');
     const parkingRows=(parking?.releaseDetails||[]).map((r)=>`<tr><th scope="row">${escapeHtml(cleanTicketTitle(r.title,parking.label))}</th><td class="price-money">${escapeHtml(money(r))}</td></tr>`).join('');
-    const admission=`<div class="price-table-wrap" role="region" aria-label="Admission prices: scroll horizontally to compare all prices" tabindex="0"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
+    const admission=`<div class="price-extra-title">Admission Tickets</div><div class="price-table-wrap" role="region" aria-label="Admission prices: scroll horizontally to compare all prices" tabindex="0"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
     const parkingTable=parkingRows?`<div class="price-extra-title">Parking tickets</div><div class="price-table-wrap" role="region" aria-label="Parking prices: scroll horizontally for details" tabindex="0"><table class="price-table parking-price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Price<small>150 spaces until sold out or 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${parkingRows}</tbody></table></div>`:'';
     const html=`${admission}${parkingTable}`;
     if(root.innerHTML!==html)root.innerHTML=html;
@@ -721,32 +727,75 @@ window.FIREWORKS_EVENT = {
   }
   function setControl(control,value){
     const next=Math.max(0,Math.floor(Number(value)||0)); if(!control)return;
-    if(control.tagName==='SELECT'){const nums=[...control.options].map((o)=>Number(o.value)).filter(Number.isFinite).sort((a,b)=>a-b);const allowed=nums.filter((n)=>n<=next).pop();control.value=String(allowed??nums[0]??0);} else control.value=String(next);
+    if(control.tagName==='SELECT'){
+      const nums=[...control.options].map((o)=>Number(o.value)).filter(Number.isFinite).sort((a,b)=>a-b);
+      const allowed=nums.filter((n)=>n<=next).pop();
+      control.value=String(allowed??nums[0]??0);
+      return;
+    }
+    const valueText=String(next);
+    const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+    if(setter) setter.call(control,valueText); else control.value=valueText;
+    if(next===0 && Number(control.getAttribute('min'))>0) control.setAttribute('min','0');
+    control.setCustomValidity?.('');
   }
-  function notifyControl(control,value,{flash=true}={}){
-    if(!control)return; setControl(control,value); autoAdjusting=true;
-    try{control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));}finally{autoAdjusting=false;}
+  function notifyControl(control,value,{flash=true,nativeEventInFlight=false}={}){
+    if(!control)return; setControl(control,value);
+    if(!nativeEventInFlight){
+      autoAdjusting=true;
+      try{
+        const inputEvent=control.tagName==='SELECT'||typeof InputEvent!=='function'
+          ? new Event('input',{bubbles:true,composed:true})
+          : new InputEvent('input',{bubbles:true,composed:true,inputType:'insertReplacementText',data:null});
+        control.dispatchEvent(inputEvent);
+        control.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
+      }finally{autoAdjusting=false;}
+    }
     if(flash){control.classList.remove('wfd-needs-reduction');control.classList.add('wfd-auto-adjusted');window.setTimeout(()=>control.classList.remove('wfd-auto-adjusted'),1600);}
   }
+  function normaliseQuantityValidity(){
+    document.querySelectorAll('#tito-mount .wfd-release-row input[type="number"]').forEach((control)=>{
+      if(numericValue(control)===0 && Number(control.getAttribute('min'))>0) control.setAttribute('min','0');
+      control.setCustomValidity?.('');
+    });
+  }
 
-  function statusMessage(text,{acknowledge=false}={}) {
-    const mount=document.getElementById('tito-mount'); if(!mount)return;
-    let el=mount.querySelector('.wfd-capacity-message');
-    if(!el){el=document.createElement('div');el.className='wfd-capacity-message';mount.appendChild(el);}
-    // A transient limit hint must not dismiss an unacknowledged correction.
-    if(el.dataset.requiresAcknowledgement === 'true' && !el.hidden && !acknowledge)return;
-    el.dataset.requiresAcknowledgement = acknowledge ? 'true' : 'false';
+  function placeAcknowledgementMessage(el,anchor,mount){
+    const release=String(anchor?.dataset?.wfdRelease||'');
+    if(!anchor?.isConnected){mount.appendChild(el);return;}
+    if(release)el.dataset.wfdAnchorRelease=release;
+    let after=anchor;
+    while(after.nextElementSibling && after.nextElementSibling!==el && after.nextElementSibling.classList.contains('wfd-capacity-message') && (!release || after.nextElementSibling.dataset.wfdAnchorRelease===release)) after=after.nextElementSibling;
+    after.after(el);
+  }
+
+  function statusMessage(text,{acknowledge=false,anchor=null}={}) {
+    const mount=document.getElementById('tito-mount'); if(!mount)return null;
+    if(acknowledge){
+      if(!text)return null;
+      const el=document.createElement('div');
+      el.className='wfd-capacity-message wfd-capacity-message-inline';
+      el.dataset.requiresAcknowledgement='true';
+      const copy=document.createElement('span');copy.className='wfd-capacity-message-copy';copy.textContent=text;el.appendChild(copy);
+      el.setAttribute('role','alert');el.setAttribute('aria-live','assertive');
+      const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';
+      button.addEventListener('click',()=>el.remove());
+      el.appendChild(button);
+      placeAcknowledgementMessage(el,anchor,mount);
+      el.hidden=false;
+      return el;
+    }
+
+    let el=mount.querySelector('.wfd-capacity-message[data-wfd-transient="true"]');
+    if(!el){el=document.createElement('div');el.className='wfd-capacity-message';el.dataset.wfdTransient='true';mount.appendChild(el);}
     if(messageTimer){window.clearTimeout(messageTimer);messageTimer=null;}
     el.replaceChildren();
-    if(!text){el.hidden=true;return;}
+    if(!text){el.hidden=true;return el;}
     const copy=document.createElement('span');copy.className='wfd-capacity-message-copy';copy.textContent=text;el.appendChild(copy);
-    el.setAttribute('role',acknowledge?'alert':'status');el.setAttribute('aria-live',acknowledge?'assertive':'polite');
-    if(acknowledge){
-      const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';button.addEventListener('click',()=>{el.dataset.requiresAcknowledgement='false';el.hidden=true;});el.appendChild(button);
-    } else {
-      messageTimer=window.setTimeout(()=>{el.hidden=true;messageTimer=null;},6500);
-    }
+    el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+    messageTimer=window.setTimeout(()=>{el.hidden=true;messageTimer=null;},6500);
     el.hidden=false;
+    return el;
   }
 
   function spillToNext(sourceRow,quantity,attempt=0) {
@@ -760,48 +809,51 @@ window.FIREWORKS_EVENT = {
     const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(targetRelease.slug))}"]`); const control=row?.querySelector('input[type="number"],select');
     if(!control){if(attempt<8)window.setTimeout(()=>spillToNext(sourceRow,quantity,attempt+1),50);return false;}
     notifyControl(control,numericValue(control)+quantity);
-    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`,{acknowledge:true});
+    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`,{acknowledge:true,anchor:sourceRow});
     schedulePatch(); return true;
   }
 
   function incrementIntent(button){const t=String([button?.textContent,button?.getAttribute?.('aria-label'),button?.getAttribute?.('title'),button?.className].filter(Boolean).join(' ')).toLowerCase();return t.trim()==='+'||/(^|\s)(add|plus|increase|increment)(\s|$)/.test(t);}
+  function checkoutIntent(button){const t=String(button?.textContent||button?.value||'').trim().toLowerCase();return /continue|checkout|book|register|next/.test(t);}
 
-  function clampAdmissionControl(control,row) {
+  function clampAdmissionControl(control,row,{nativeEventInFlight=false}={}) {
     const group=groupByKey(row.dataset.wfdGroup); const remaining=remoteRemaining(group); if(remaining==null)return;
     const groupExcess=Math.max(0,selectedForGroup(group.key)-remaining);
     const eventLeft=eventRemaining(); const eventExcess=eventLeft==null?0:Math.max(0,totalAdmissionSelected()-eventLeft);
     const excess=Math.max(groupExcess,eventExcess); if(!excess){control.classList.remove('wfd-needs-reduction');return;}
     control.classList.add('wfd-needs-reduction');
     const current=numericValue(control); const moved=Math.min(excess,current); if(!moved)return;
-    notifyControl(control,Math.max(0,current-moved));
+    notifyControl(control,Math.max(0,current-moved),{nativeEventInFlight});
     const next=nextWaveFor(group.key);
     if(next && !eventExcess) window.setTimeout(()=>spillToNext(row,moved),0);
-    else statusMessage(`${cleanTicketTitle(releaseForRow(row)?.title,group.label)} has been reduced to keep the order within the remaining event capacity.`,{acknowledge:true});
+    else statusMessage(`${cleanTicketTitle(releaseForRow(row)?.title,group.label)} has been reduced to keep the order within the remaining event capacity.`,{acknowledge:true,anchor:row});
   }
 
-  function clampParkingControl(control,row) {
+  function clampParkingControl(control,row,{nativeEventInFlight=false}={}) {
     const group=groupByKey('parking'); const remaining=remoteRemaining(group); if(remaining==null)return;
     const total=selectedForGroup('parking'); const excess=Math.max(0,total-remaining); if(!excess){control.classList.remove('wfd-needs-reduction');return;}
     control.classList.add('wfd-needs-reduction');
     const current=numericValue(control); const reduce=Math.min(excess,current); if(!reduce)return;
-    notifyControl(control,Math.max(0,current-reduce));
-    statusMessage('Your parking quantity has been reduced to the number of spaces still available.',{acknowledge:true});
+    notifyControl(control,Math.max(0,current-reduce),{nativeEventInFlight});
+    statusMessage('Your parking quantity has been reduced to the number of spaces still available.',{acknowledge:true,anchor:row});
   }
 
-  function clampPreschoolControl(control) {
+  function clampPreschoolControl(control,row,{nativeEventInFlight=false}={}) {
     const eventLeft=eventRemaining(); if(eventLeft==null)return;
     const excess=Math.max(0,totalAdmissionSelected()-eventLeft);
     if(!excess){control.classList.remove('wfd-needs-reduction');return;}
     control.classList.add('wfd-needs-reduction');
     const current=numericValue(control); const reduce=Math.min(excess,current); if(!reduce)return;
-    notifyControl(control,Math.max(0,current-reduce));
-    statusMessage('The Pre-school quantity has been reduced to keep the order within the remaining event capacity.',{acknowledge:true});
+    notifyControl(control,Math.max(0,current-reduce),{nativeEventInFlight});
+    statusMessage('The Pre-school quantity has been reduced to keep the order within the remaining event capacity.',{acknowledge:true,anchor:row});
   }
 
   function installSpillHandlers() {
     if(spillHandlersInstalled)return; spillHandlersInstalled=true;
     document.addEventListener('click',(event)=>{
-      const button=event.target?.closest?.('button,a,[role="button"]'); if(!button||!incrementIntent(button))return;
+      const button=event.target?.closest?.('button,a,[role="button"]'); if(!button)return;
+      if(document.getElementById('tito-mount')?.contains(button) && checkoutIntent(button)){normaliseQuantityValidity();return;}
+      if(!incrementIntent(button))return;
       const row=button.closest('.wfd-release-row'); if(!row)return;
       if(row.dataset.wfdGroupKind==='admission'){
         const group=groupByKey(row.dataset.wfdGroup); const remaining=remoteRemaining(group); if(remaining!=null&&selectedForGroup(group.key)>=remaining){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();spillToNext(row,1);}
@@ -814,7 +866,7 @@ window.FIREWORKS_EVENT = {
     const onControl=(event)=>{
       if(autoAdjusting){schedulePatch();return;}
       const control=event.target; const row=control?.closest?.('.wfd-release-row'); if(!row)return;
-      if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row); else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control);
+      if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row,{nativeEventInFlight:true}); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row,{nativeEventInFlight:true}); else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control,row,{nativeEventInFlight:true});
       schedulePatch();
     };
     document.addEventListener('input',onControl,true); document.addEventListener('change',onControl,true);
@@ -833,10 +885,10 @@ window.FIREWORKS_EVENT = {
         const row=control.closest('.wfd-release-row');
         if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row);
         else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row);
-        else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control);
+        else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control,row);
       });
     }
-    allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); ensureTicketDescriptions(); alignQuantityControls(); renderPriceTable(); applyOrdinals();
+    allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); ensureTicketDescriptions(); alignQuantityControls(); normaliseQuantityValidity(); renderPriceTable(); applyOrdinals();
     document.querySelector('.ticket-help')?.remove();
     const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v25-tito-email')){const p=document.createElement('p');p.className='wfd-v25-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
   }

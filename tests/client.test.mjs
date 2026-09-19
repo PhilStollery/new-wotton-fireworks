@@ -46,18 +46,35 @@ test('preschool consumes event capacity; correction warning survives transient h
   const t=await setup();try{
     rows(t);const input=t.w.document.querySelector('[data-wfd-release="preschool"] input');
     input.value='5';input.dispatchEvent(new t.w.Event('input',{bubbles:true}));await t.settle();
-    assert.equal(input.value,'3');let warning=t.w.document.querySelector('.wfd-capacity-message');assert.ok(!warning.hidden);assert.ok(warning.querySelector('button'));
+    assert.equal(input.value,'3');let warning=t.w.document.querySelector('.wfd-capacity-message[data-requires-acknowledgement="true"]');assert.ok(warning);assert.ok(warning.querySelector('button'));
     t.w.document.querySelector('[data-wfd-release="preschool"] button').click();await t.settle();
-    assert.equal(warning.dataset.requiresAcknowledgement,'true');assert.ok(!warning.hidden);
-    assert.ok(!t.timers.some(x=>x.delay===6500&&!x.cancelled));
-    warning.querySelector('button').click();assert.ok(warning.hidden);
+    assert.equal(warning.dataset.requiresAcknowledgement,'true');assert.ok(warning.isConnected);
+    const transient=t.timers.find(x=>x.delay===6500&&!x.cancelled);
+    if(transient){transient.fn();await t.settle();assert.ok(warning.isConnected);}
+    warning.querySelector('button').click();assert.ok(!warning.isConnected);
   }finally{t.dom.window.close();}
 });
 test('background availability decrease corrects an existing selection',async()=>{
   const t=await setup();try{
     rows(t);const input=t.w.document.querySelector('[data-wfd-release="preschool"] input');input.value='3';await t.settle();
     t.setPayload(data(1));await t.w.fetch('/api/ticket-availability');await t.settle();
-    assert.equal(input.value,'1');assert.ok(!t.w.document.querySelector('.wfd-capacity-message').hidden);
+    assert.equal(input.value,'1');assert.ok(t.w.document.querySelector('.wfd-capacity-message[data-requires-acknowledgement="true"]'));
+  }finally{t.dom.window.close();}
+});
+test('reallocation warnings sit below the source ticket and stack until acknowledged',async()=>{
+  const t=await setup();try{
+    t.setPayload(data(10));await t.w.fetch('/api/ticket-availability');await t.settle();
+    rows(t);const row=t.w.document.querySelector('[data-wfd-release="super"]');const input=row.querySelector('input');input.value='3';await t.settle();
+    row.querySelector('button').click();row.querySelector('button').click();await t.settle();
+    const warnings=[...t.w.document.querySelectorAll('.wfd-capacity-message[data-requires-acknowledgement="true"]')];
+    assert.equal(warnings.length,2);assert.equal(row.nextElementSibling,warnings[0]);assert.equal(warnings[0].nextElementSibling,warnings[1]);
+    warnings[0].querySelector('button').click();assert.equal(t.w.document.querySelectorAll('.wfd-capacity-message[data-requires-acknowledgement="true"]').length,1);
+  }finally{t.dom.window.close();}
+});
+test('zero quantity inputs remain valid after automatic correction',async()=>{
+  const t=await setup();try{
+    rows(t);const input=t.w.document.querySelector('[data-wfd-release="advance"] input');input.min='1';input.value='0';await t.settle();
+    assert.equal(input.min,'0');assert.equal(input.validationMessage,'');
   }finally{t.dom.window.close();}
 });
 test('event overflow is reduced rather than transferred to a more expensive band',async()=>{

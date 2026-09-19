@@ -53,7 +53,6 @@ export function configurationStatus(config = getConfig()) {
     ["live.superSaverActivityId", config.tito.activities.superSaver],
     ["live.advanceActivityId", config.tito.activities.advance],
     ["live.parkingCapacityActivityId", config.tito.activities.parkingCapacity],
-    ["live.generalParkingActivityId", config.tito.activities.generalParking],
     ["live.superSaverReleases", config.tito.releases.superSaver.length],
     ["live.advanceReleases", config.tito.releases.advance.length],
     ["live.standardReleases", config.tito.releases.standard.length],

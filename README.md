@@ -1,13 +1,23 @@
-# Wotton-under-Edge Firework Display 2026 — Tito integration v22
+# Wotton-under-Edge Firework Display 2026 — Tito integration v23
 
-V22 is cumulative over v21. It keeps the established Tito checkout flow, ticket availability logic and site styling, and makes the requested customer-facing wording changes.
+V23 is cumulative over v22 and is the current test package.
 
-Key changes:
+It keeps Tito responsible for checkout, payment, ticket emails, QR codes and gate check-in, while the site handles presentation and live availability.
 
-- The pre-school reminder now says: “Children who have not yet started Reception attend free, but please make sure they have a ticket.”
-- The travel card previously labelled **Parking** is now **Driving**.
-- Driving guidance now makes clear that parking must actually be booked in the ticket selector, that Wotton Road will be closed to non-ticket holders, and that New Road must not be used for event access or parking.
-- Blue Badge wording continues to state that a valid Blue Badge must be displayed.
-- The separate travel-planning note still makes clear that the choice is only to help estimate demand, is not a commitment, and does not need updating if plans change.
+Key changes in v23:
 
-All v21 availability/load/security fixes are retained. Tito remains responsible for booking, payment, confirmation emails, QR codes, reservations/holds and gate check-in.
+- Shared Activity remaining counts now drive Super Saver, Advance and Standard counters.
+- Browser selections reduce those counters locally; selection beyond a band's remaining capacity is carried into the same ticket type in the next band.
+- General parking starts from 120 spaces within the 150-space Parking Activity. Blue Badge bookings above the protected 30-space reserve reduce the general allocation.
+- Pre-school has a simple non-numeric "Everyone attending needs a ticket" header.
+- Paid-band headers show the band name plus remaining availability and closing date, rather than generic "left at this price" wording.
+- Admission release descriptions are visually suppressed in the selector so the band/deadline information is not duplicated.
+- Blue Badge eligibility wording is kept with the Blue Badge ticket row, not in the group header.
+- A new Prices section presents all customer ticket releases, prices, allocations and closing dates before the Tickets section.
+- Tickets are presented as three panels: Book for Wotton-under-Edge; Decide how you'll get there; Get your tickets.
+- Travel planning remains optional planning data only. It is not a commitment and customers do not need to report later changes.
+- Travel option labels remain Walking / Bus from Wotton / Bus from Charfield / Driving after selection.
+- Previous child-accompaniment wording has been removed from the public site and terms.
+- Visible dates use ordinals.
+
+No new Netlify secrets are required.

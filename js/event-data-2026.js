@@ -42,13 +42,14 @@ window.FIREWORKS_EVENT = {
       title: "Walk",
       price: "Free",
       copy: "If you can walk to the display, please do. Everyone enters through the Wotton Community Sports Centre entrance.",
-      preferenceOptions: [{ label: "I'm walking", value: "walk" }]
+      preferenceOptions: [{ label: "I'm walking", value: "walk" }],
+      selectedLabel: "Travel plan: walking"
     },
     {
       eyebrow: "Free transport",
       title: "Bus",
       price: "Free",
-      copy: "Free bus services will serve both Charfield and Wotton-under-Edge. Everyone arriving by bus uses the same main entrance; exact stops and timings will be published once confirmed.",
+      copy: "Free buses will serve both Wotton-under-Edge and Charfield. Tell us which one you are likely to use; exact stops and timings will be published once confirmed.",
       preferenceOptions: [
         { label: "Bus from Wotton", value: "bus_wotton" },
         { label: "Bus from Charfield", value: "bus_charfield" }
@@ -56,17 +57,11 @@ window.FIREWORKS_EVENT = {
     },
     {
       eyebrow: "Pre-booked",
-      title: "Paid parking",
-      price: "£10",
-      copy: "Parking is separate from admission and must be pre-booked. Space on site is limited, so parking can sell out before admission tickets do.",
-      preferenceOptions: [{ label: "I'm parking", value: "park" }]
-    },
-    {
-      eyebrow: "Accessibility",
-      title: "Blue Badge parking",
-      price: "Free",
-      copy: "Reserve a free Blue Badge parking space when you book. Accessible parking is protected from the general parking allocation.",
-      preferenceOptions: [{ label: "I'm parking", value: "park" }]
+      title: "Parking",
+      price: "£10 / Blue Badge free",
+      copy: "If you plan to drive, choose this travel option, then select the number and type of parking spaces you need in the ticket list below. This choice does not reserve parking. A valid Blue Badge must be displayed for Blue Badge parking.",
+      preferenceOptions: [{ label: "I'm planning to drive", value: "park" }],
+      selectedLabel: "Travel plan noted — now select your parking ticket below"
     }
   ],
 
@@ -89,7 +84,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       title: "Blue Badge parking",
-      copy: "Blue Badge parking is free but must still be reserved while booking so an accessible space is protected for you."
+      copy: "Blue Badge parking is free but must still be reserved while booking so an accessible space is protected for you. A valid Blue Badge must be displayed in the vehicle."
     },
     {
       title: "Outdoor event",
@@ -128,7 +123,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "How does Blue Badge parking work?",
-      a: "Blue Badge parking is free, but please reserve it while booking so we can keep an accessible space available for you."
+      a: "Blue Badge parking is free, but please reserve it while booking so we can keep an accessible space available for you. A valid Blue Badge must be displayed in the vehicle."
     },
     {
       q: "What happens if general parking sells out?",
@@ -169,13 +164,11 @@ window.FIREWORKS_EVENT = {
   ]
 };
 
-/* v19 compatibility layer.
-   This intentionally sits in event-data-2026.js because that file loads before
-   the established ticket integration. It adds the v19 load/security UX changes
-   without altering the tested core checkout code in fireworks-2026.js. */
+/* v20 compatibility layer.
+   This loads before the established ticket integration and adds the v20
+   presentation/load behaviour without changing Tito's checkout flow. */
 (() => {
   const TRAVEL_KEY = 'wfdTravelPreference2026';
-  const TITO_EVENT = 'wotton-firework-display/2026';
   const nativeFetch = window.fetch.bind(window);
   const nativeSetInterval = window.setInterval.bind(window);
   let latestAvailability = null;
@@ -183,6 +176,7 @@ window.FIREWORKS_EVENT = {
   let patchScheduled = false;
   let postPurchaseWriteSeen = false;
   let travelAutosaveTimer = null;
+  let observer = null;
 
   function readTravel() {
     if (travelValue) return travelValue;
@@ -194,24 +188,31 @@ window.FIREWORKS_EVENT = {
   function saveTravel(value) {
     travelValue = String(value || '');
     try { localStorage.setItem(TRAVEL_KEY, travelValue); } catch { /* optional storage */ }
-    updateTravelButtons();
+    updateTravelControls();
   }
 
   function preferenceOptions(item) {
     return Array.isArray(item?.preferenceOptions) ? item.preferenceOptions : [];
   }
 
-  function ensureV19Styles() {
-    if (document.getElementById('wfd-v19-styles')) return;
+  function ensureV20Styles() {
+    if (document.getElementById('wfd-v20-styles')) return;
     const style = document.createElement('style');
-    style.id = 'wfd-v19-styles';
+    style.id = 'wfd-v20-styles';
     style.textContent = `
+      #travel-choices.travel-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .travel-choice.is-travel-clickable{cursor:pointer}
+      .travel-choice.is-travel-clickable:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
       .travel-choice-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
       .travel-choice-action{appearance:none;border:1px solid rgba(255,255,255,.32);background:transparent;color:#fff;border-radius:999px;padding:.42rem .7rem;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
       .travel-choice-action:hover,.travel-choice-action:focus-visible{border-color:var(--yellow);outline:none}
       .travel-choice-action.is-selected{background:var(--yellow);border-color:var(--yellow);color:var(--grey)}
-      .travel-choice.has-travel-selection{border-color:rgba(251,175,51,.82)}
-      .wfd-v19-tito-email{margin-top:.55rem;font-size:.92rem}
+      .travel-choice-selection{display:inline-flex;margin-top:13px;border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:.42rem .7rem;color:#fff;font-size:.76rem;font-weight:800}
+      .travel-choice.has-travel-selection{border-color:rgba(251,175,51,.9);box-shadow:inset 0 0 0 1px rgba(251,175,51,.22)}
+      .travel-choice.has-travel-selection .travel-choice-selection{background:var(--yellow);border-color:var(--yellow);color:var(--grey)}
+      .wfd-v20-tito-email{margin-top:.55rem;font-size:.92rem}
+      @media (max-width:900px){#travel-choices.travel-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media (max-width:650px){#travel-choices.travel-strip{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
   }
@@ -220,48 +221,121 @@ window.FIREWORKS_EVENT = {
     const root = document.getElementById('travel-choices');
     const items = window.FIREWORKS_EVENT?.travel || [];
     if (!root || !items.length) return;
+
     const cards = [...root.querySelectorAll('.travel-choice')];
     cards.forEach((card, index) => {
-      if (card.dataset.wfdTravelEnhanced === 'true') return;
-      const options = preferenceOptions(items[index]);
+      const item = items[index];
+      if (!item || card.dataset.wfdTravelEnhanced === 'true') return;
+      const options = preferenceOptions(item);
       if (!options.length) return;
-      const actions = document.createElement('div');
-      actions.className = 'travel-choice-actions';
-      actions.setAttribute('aria-label', `Travel preference: ${items[index].title}`);
-      options.forEach((option) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'travel-choice-action';
-        button.dataset.travelValue = option.value;
-        button.textContent = option.label;
-        button.addEventListener('click', () => saveTravel(option.value));
-        actions.appendChild(button);
-      });
-      card.appendChild(actions);
+
+      if (options.length === 1) {
+        const option = options[0];
+        card.classList.add('is-travel-clickable');
+        card.dataset.travelSingleValue = option.value;
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `${item.title}: ${option.label}`);
+
+        const status = document.createElement('span');
+        status.className = 'travel-choice-selection';
+        status.dataset.travelSingleStatus = 'true';
+        status.textContent = option.label;
+        card.appendChild(status);
+
+        const choose = () => saveTravel(option.value);
+        card.addEventListener('click', (event) => {
+          if (event.target.closest('a,button,input,select,textarea')) return;
+          choose();
+        });
+        card.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          choose();
+        });
+      } else {
+        card.setAttribute('role', 'group');
+        card.setAttribute('aria-label', `Travel preference: ${item.title}`);
+        const actions = document.createElement('div');
+        actions.className = 'travel-choice-actions';
+        options.forEach((option) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'travel-choice-action';
+          button.dataset.travelValue = option.value;
+          button.textContent = option.label;
+          button.addEventListener('click', () => saveTravel(option.value));
+          actions.appendChild(button);
+        });
+        card.appendChild(actions);
+      }
+
       card.dataset.wfdTravelEnhanced = 'true';
     });
-    updateTravelButtons();
+    updateTravelControls();
   }
 
-  function updateTravelButtons() {
+  function updateTravelControls() {
     const selected = readTravel();
+    const items = window.FIREWORKS_EVENT?.travel || [];
+
     document.querySelectorAll('[data-travel-value]').forEach((button) => {
       const active = button.dataset.travelValue === selected;
       button.classList.toggle('is-selected', active);
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    document.querySelectorAll('.travel-choice').forEach((card) => {
-      card.classList.toggle('has-travel-selection', Boolean(card.querySelector('.travel-choice-action.is-selected')));
+
+    document.querySelectorAll('.travel-choice').forEach((card, index) => {
+      const singleValue = card.dataset.travelSingleValue || '';
+      const active = Boolean(singleValue && singleValue === selected) || Boolean(card.querySelector('.travel-choice-action.is-selected'));
+      card.classList.toggle('has-travel-selection', active);
+      if (singleValue) card.setAttribute('aria-pressed', active ? 'true' : 'false');
+      const status = card.querySelector('[data-travel-single-status]');
+      if (status) {
+        const item = items[index];
+        const option = preferenceOptions(item)[0];
+        const next = active ? (item?.selectedLabel || 'Selected') : (option?.label || 'Choose');
+        if (status.textContent !== next) status.textContent = next;
+      }
     });
   }
 
-  function patchCounter(key, html, emptyHtml = null) {
-    const counter = document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${key}"]`);
-    if (!counter) return;
-    const next = counter.classList.contains('is-empty') && emptyHtml ? emptyHtml : html;
-    if (counter.innerHTML !== next) {
-      counter.innerHTML = next;
-    }
+  function groupFromAvailability(key) {
+    const groups = [
+      ...(latestAvailability?.waves || []),
+      ...(latestAvailability?.parkingGroups || [])
+    ];
+    return groups.find((group) => String(group?.key || '') === String(key)) || null;
+  }
+
+  function patchCounter(key, html) {
+    const counter = document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${CSS.escape(String(key))}"]`);
+    if (!counter || counter.innerHTML === html) return counter;
+    counter.innerHTML = html;
+    return counter;
+  }
+
+  function normaliseAdmissionCounters() {
+    (latestAvailability?.waves || []).forEach((wave) => {
+      const key = String(wave?.key || '');
+      const counter = document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${CSS.escape(key)}"]`);
+      if (!counter) return;
+      counter.dataset.wfdGroupKind = 'admission';
+
+      if (wave.counterMode === 'standard-static') {
+        patchCounter(key, '<strong>Standard tickets</strong><span>Standard price applies after the discounted allocations have finished.</span>');
+        return;
+      }
+
+      const strong = counter.querySelector('strong');
+      const span = counter.querySelector('span');
+      if (strong && /\bspaces?\b/i.test(strong.textContent || '')) {
+        strong.textContent = String(strong.textContent || '').replace(/\bspace\b/gi, 'ticket').replace(/\bspaces\b/gi, 'tickets');
+      }
+      if (span && /parking options/i.test(span.textContent || '')) {
+        span.textContent = String(span.textContent || '').replace(/parking options/gi, 'ticket types');
+      }
+    });
   }
 
   function reorderPreschool() {
@@ -271,9 +345,10 @@ window.FIREWORKS_EVENT = {
     const rows = [...mount.querySelectorAll('.wfd-release-row[data-wfd-group="preschool"]')];
     const firstAdmission = mount.querySelector('.wfd-group-counter[data-wfd-group-kind="admission"]');
     if (!counter || !rows.length || !firstAdmission) return;
-    if (counter.compareDocumentPosition(firstAdmission) & Node.DOCUMENT_POSITION_PRECEDING) {
-      firstAdmission.before(counter, ...rows);
-    }
+    counter.dataset.wfdGroupKind = 'standalone';
+    rows.forEach((row) => { row.dataset.wfdGroupKind = 'standalone'; });
+    const counterBefore = Boolean(counter.compareDocumentPosition(firstAdmission) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (!counterBefore) firstAdmission.before(counter, ...rows);
   }
 
   function hideExpiredAdmissionWaves() {
@@ -286,52 +361,48 @@ window.FIREWORKS_EVENT = {
 
   function patchTicketPresentation() {
     enhanceTravelCards();
+    normaliseAdmissionCounters();
 
-    const preschool = document.querySelector('.wfd-group-counter[data-wfd-group-counter="preschool"]');
-    if (preschool) {
-      const soldOut = preschool.classList.contains('is-empty');
-      patchCounter(
-        'preschool',
-        '<strong>Everyone attending needs a ticket</strong><span>Children who have not yet started Reception attend free, but please select a ticket for them.</span>',
-        '<strong>Admission is sold out</strong><span>Free pre-school tickets use the same overall event capacity as other admission tickets.</span>'
-      );
-      preschool.classList.toggle('is-empty', soldOut);
-    }
-
-    const generalParking = document.querySelector('.wfd-group-counter[data-wfd-group-counter="general-parking"]');
-    if (generalParking) {
-      const strong = generalParking.querySelector('strong')?.textContent || '';
-      const count = strong.match(/(\d+)\s+spaces?\s+left/i)?.[1];
-      const normal = count
-        ? `<strong>${count} general parking ${Number(count) === 1 ? 'space' : 'spaces'} left</strong><span>Parking must be pre-booked.</span>`
-        : '<strong>Parking must be pre-booked</strong><span>Spaces are limited and may sell out before admission tickets.</span>';
-      patchCounter(
-        'general-parking',
-        normal,
-        '<strong>General parking is sold out</strong><span>Please walk if you can, or use the free bus from Wotton-under-Edge or Charfield.</span>'
-      );
-    }
-
+    const preschoolGroup = groupFromAvailability('preschool');
+    const preschoolSoldOut = Boolean(preschoolGroup?.soldOut);
     patchCounter(
-      'blue-badge-parking',
-      '<strong>Blue Badge parking is reserved separately</strong><span>Reserve a free space when you book.</span>',
-      '<strong>Blue Badge parking is sold out</strong><span>Please contact us if you need specific access information.</span>'
+      'preschool',
+      preschoolSoldOut
+        ? '<strong>Admission is sold out</strong><span>Every attendee needs a ticket, including children who have not yet started Reception.</span>'
+        : '<strong>Everyone attending needs a ticket</strong><span>Children who have not yet started Reception attend free, but please select a ticket for them.</span>'
     );
 
-    if (latestAvailability?.testMode) {
-      patchCounter(
-        'standard',
-        '<strong>Standard tickets</strong><span>Standard price applies after the discounted allocations have finished.</span>'
-      );
+    const generalParking = groupFromAvailability('general-parking');
+    if (generalParking) {
+      const remaining = Number(generalParking.remaining);
+      const soldOut = Boolean(generalParking.soldOut) || (Number.isFinite(remaining) && remaining <= 0);
+      const html = soldOut
+        ? '<strong>General parking is sold out</strong><span>Please walk if you can, or use the free bus from Wotton-under-Edge or Charfield.</span>'
+        : Number.isFinite(remaining) && remaining < 100000
+          ? `<strong>${remaining} general parking ${remaining === 1 ? 'space' : 'spaces'} left</strong><span>Parking must be pre-booked below.</span>`
+          : '<strong>Parking must be pre-booked</strong><span>Select the number of general parking spaces you need below.</span>';
+      patchCounter('general-parking', html);
+    }
+
+    const blueBadge = groupFromAvailability('blue-badge-parking');
+    if (blueBadge) {
+      const remaining = Number(blueBadge.remaining);
+      const soldOut = Boolean(blueBadge.soldOut) || (Number.isFinite(remaining) && remaining <= 0);
+      const html = soldOut
+        ? '<strong>Blue Badge parking is sold out</strong><span>A valid Blue Badge is required for Blue Badge parking. Please contact us if you need specific access information.</span>'
+        : Number.isFinite(remaining) && remaining < 100000
+          ? `<strong>${remaining} Blue Badge parking ${remaining === 1 ? 'space' : 'spaces'} left</strong><span>Blue Badge parking is free to reserve. A valid Blue Badge must be displayed in the vehicle.</span>`
+          : '<strong>Blue Badge parking</strong><span>Reserve a free space below. A valid Blue Badge must be displayed in the vehicle.</span>';
+      patchCounter('blue-badge-parking', html);
     }
 
     reorderPreschool();
     hideExpiredAdmissionWaves();
 
     const success = document.querySelector('.post-purchase-success');
-    if (success && !success.querySelector('.wfd-v19-tito-email')) {
+    if (success && !success.querySelector('.wfd-v20-tito-email')) {
       const p = document.createElement('p');
-      p.className = 'wfd-v19-tito-email';
+      p.className = 'wfd-v20-tito-email';
       p.innerHTML = '<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';
       success.querySelector('div')?.appendChild(p);
     }
@@ -346,8 +417,8 @@ window.FIREWORKS_EVENT = {
     });
   }
 
-  // Collapse the existing 10-second availability loop to one visible-tab check
-  // every 30 seconds. The server-side durable cache handles the shared load.
+  // The established integration asks every 10 seconds. Keep the same availability
+  // behaviour but reduce load to one visible-tab check every 30 seconds.
   window.setInterval = function patchedSetInterval(fn, delay, ...args) {
     const body = typeof fn === 'function' ? Function.prototype.toString.call(fn) : '';
     if (Number(delay) === 10000 && /refreshAvailability/.test(body)) {
@@ -358,8 +429,8 @@ window.FIREWORKS_EVENT = {
     return nativeSetInterval(fn, delay, ...args);
   };
 
-  // Strip the old cache-busting query parameter before it reaches Netlify and
-  // capture the latest availability state for the v19 presentation helpers.
+  // Remove the old per-request cache-busting timestamp so Netlify's shared cache
+  // can collapse availability traffic before it reaches Tito.
   window.fetch = async function patchedFetch(input, init) {
     if (typeof input === 'string' && input.startsWith('/api/ticket-availability')) {
       const url = new URL(input, window.location.href);
@@ -368,7 +439,7 @@ window.FIREWORKS_EVENT = {
       response.clone().json().then((payload) => {
         if (payload?.ok) {
           latestAvailability = payload;
-          window.dispatchEvent(new CustomEvent('wfd:v19-availability', { detail: payload }));
+          window.dispatchEvent(new CustomEvent('wfd:v20-availability', { detail: payload }));
           schedulePatch();
         }
       }).catch(() => {});
@@ -395,10 +466,7 @@ window.FIREWORKS_EVENT = {
     return nativeFetch(input, init);
   };
 
-  // Save travel even when the purchaser skips every optional post-purchase
-  // question. Wait briefly first: if the customer answers anything, the normal
-  // serialised preference write carries travel in the same request and avoids a
-  // concurrent metadata update.
+  // Save travel even if the purchaser skips every optional post-purchase answer.
   window.addEventListener('wfd:registration-finished', (event) => {
     const registration = event.detail || {};
     const travel = readTravel();
@@ -420,15 +488,24 @@ window.FIREWORKS_EVENT = {
     }, 4000);
   });
 
-  window.addEventListener('wfd:v19-availability', schedulePatch);
+  window.addEventListener('wfd:v20-availability', schedulePatch);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') schedulePatch();
   });
-  document.addEventListener('DOMContentLoaded', () => {
-    ensureV19Styles();
+
+  function initialise() {
+    ensureV20Styles();
     readTravel();
     schedulePatch();
-    const observer = new MutationObserver(schedulePatch);
-    observer.observe(document.body, { childList: true, subtree: true });
-  }, { once: true });
+    if (!observer) {
+      observer = new MutationObserver(schedulePatch);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialise, { once: true });
+  } else {
+    initialise();
+  }
 })();

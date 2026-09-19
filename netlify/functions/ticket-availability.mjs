@@ -1,10 +1,10 @@
 import { DateTime } from "luxon";
 import { getConfig } from "./_lib/config.mjs";
-import { INTEGRATION_CONFIG_2026 } from "./_lib/integration-config-2026.mjs";
-import { getActivities, getActivity, getReleases } from "./_lib/tito.mjs";
+import { getActivity, getReleases } from "./_lib/tito.mjs";
 import { HttpError, json, toErrorResponse } from "./_lib/http.mjs";
 
 const CACHE_TTL_MS = 10_000;
+const UNBOUNDED_LOCAL_REMAINING = 1_000_000;
 let cachedPayload = null;
 let cachedAt = 0;
 let refreshInFlight = null;
@@ -27,10 +27,17 @@ function releaseSummary(release) {
     offSale: Boolean(release?.off_sale),
     soldOut: Boolean(release?.sold_out),
     secret: Boolean(release?.secret),
+    archived: Boolean(release?.archived),
+    expired: Boolean(release?.expired),
+    upcoming: Boolean(release?.upcoming),
+    allocatable: release?.allocatable == null ? null : Boolean(release.allocatable),
+    quantity: Number.isFinite(Number(release?.quantity)) ? Number(release.quantity) : null,
+    ticketsCount: Number(release?.tickets_count ?? 0),
     position: Number.isFinite(Number(release?.position)) ? Number(release.position) : null,
     minTicketsPerPerson: release?.min_tickets_per_person ?? null,
     maxTicketsPerPerson: release?.max_tickets_per_person ?? null,
-    defaultQuantity: release?.default_quantity ?? null
+    defaultQuantity: release?.default_quantity ?? null,
+    activities: Array.isArray(release?.activities) ? release.activities : []
   };
 }
 
@@ -58,6 +65,17 @@ function pickReleaseDetails(slugs, activity, allReleaseDetails) {
   return source.filter((release) => wanted.has(String(release.slug)));
 }
 
+function releaseIsAvailable(release) {
+  if (!release) return false;
+  if (release.archived || release.offSale || release.expired || release.upcoming || release.soldOut) return false;
+  if (release.allocatable === false) return false;
+  return true;
+}
+
+function releaseGroupSoldOut(details) {
+  return Boolean(details.length) && details.every((release) => !releaseIsAvailable(release));
+}
+
 function activitySummary({ key, label, activityName, counterMode = "capacity" }, activity, releaseDetails = null) {
   const capacity = Number.isFinite(Number(activity?.capacity)) ? Number(activity.capacity) : null;
   const allocationCount = Number(activity?.allocation_count ?? activity?.allocationCount ?? 0);
@@ -75,7 +93,7 @@ function activitySummary({ key, label, activityName, counterMode = "capacity" },
     capacity,
     allocationCount,
     remaining,
-    soldOut: Boolean(activity?.sold_out) || (capacity != null && capacity > 0 && remaining <= 0),
+    soldOut: Boolean(activity?.sold_out) || (capacity != null && capacity > 0 && remaining <= 0) || releaseGroupSoldOut(details),
     counterMode,
     releases,
     releaseDetails: details
@@ -85,39 +103,99 @@ function activitySummary({ key, label, activityName, counterMode = "capacity" },
 function staticGroup({ key, label, counterMode, releaseDetails, soldOut = null, capacity = null, allocationCount = 0, remaining = null }) {
   const details = uniqueReleaseDetails(releaseDetails || []);
   if (!details.length) return null;
-  const releaseSoldOut = details.every((release) => release.soldOut || release.offSale);
   return {
     key,
     label,
     capacity,
     allocationCount,
     remaining,
-    soldOut: soldOut == null ? releaseSoldOut : Boolean(soldOut),
+    soldOut: soldOut == null ? releaseGroupSoldOut(details) : Boolean(soldOut),
     counterMode,
     releases: details.map((release) => release.slug),
     releaseDetails: details
   };
 }
 
+function releaseText(release) {
+  return String(`${release?.title || ""} ${release?.slug || ""}`);
+}
+
 function isPreschoolRelease(release) {
-  return /pre[- ]?school|not yet in school|before reception|nursery|under\s*5/i.test(String(release?.title || release?.slug || ""));
+  return /pre[- ]?school|not yet in school|before reception|nursery|under\s*5/i.test(releaseText(release));
 }
 
 function isBlueBadgeParking(release) {
-  return /blue\s*badge|accessible\s*parking|disabled\s*parking/i.test(String(release?.title || release?.slug || ""));
+  return /blue\s*badge|accessible\s*parking|disabled\s*parking/i.test(releaseText(release));
 }
 
 function isParkingRelease(release) {
-  return /parking|car\s*park/i.test(String(release?.title || release?.slug || ""));
+  return /parking|car\s*park/i.test(releaseText(release));
 }
 
 function isPaidParking(release) {
-  const text = String(release?.title || release?.slug || "");
-  return isParkingRelease(release) && !isBlueBadgeParking(release) && !/complimentary|free\s*parking/i.test(text);
+  return isParkingRelease(release) && !isBlueBadgeParking(release) && !/complimentary|free\s*parking/i.test(releaseText(release));
+}
+
+function isSuperSaverRelease(release) {
+  return /super[\s_-]*saver/i.test(releaseText(release)) && !isParkingRelease(release);
+}
+
+function isAdvanceRelease(release) {
+  return /\badvance(?:d)?\b/i.test(releaseText(release)) && !isParkingRelease(release);
 }
 
 function isStandardRelease(release) {
-  return /standard/i.test(String(release?.title || release?.slug || "")) && !isParkingRelease(release);
+  return /\bstandard\b/i.test(releaseText(release)) && !isParkingRelease(release);
+}
+
+function isComplimentaryRelease(release) {
+  return /complimentary|\bcomp\b|volunteer|staff|crew|trader|vendor|sponsor/i.test(releaseText(release));
+}
+
+function isLegacyTestRelease(release) {
+  return /\btest\s*wave\b|^test[\s_-]/i.test(releaseText(release));
+}
+
+function configuredOrMatched(configuredSlugs, allReleaseDetails, predicate) {
+  const configured = new Set((configuredSlugs || []).filter(Boolean).map(String));
+  const byConfig = configured.size
+    ? allReleaseDetails.filter((release) => configured.has(String(release.slug)))
+    : [];
+  return byConfig.length ? byConfig : allReleaseDetails.filter(predicate);
+}
+
+function soldCount(details) {
+  return details.reduce((sum, release) => sum + Math.max(0, Number(release.ticketsCount || 0)), 0);
+}
+
+function testWave({ key, label, counterMode = "capacity", releaseDetails, capacity }) {
+  const details = uniqueReleaseDetails(releaseDetails || []);
+  if (!details.length) return null;
+  const allocationCount = soldCount(details);
+  const remaining = Number.isFinite(Number(capacity))
+    ? Math.max(Number(capacity) - allocationCount, 0)
+    : UNBOUNDED_LOCAL_REMAINING;
+  return staticGroup({
+    key,
+    label,
+    counterMode,
+    releaseDetails: details,
+    capacity: Number.isFinite(Number(capacity)) ? Number(capacity) : null,
+    allocationCount,
+    remaining,
+    soldOut: releaseGroupSoldOut(details) || remaining <= 0
+  });
+}
+
+function releaseSpecificRemaining(details, fallbackCapacity) {
+  const quantities = details.map((release) => release.quantity).filter((value) => Number.isFinite(Number(value)) && Number(value) >= 0);
+  if (quantities.length === details.length && details.length) {
+    return Math.max(quantities.reduce((sum, value) => sum + Number(value), 0) - soldCount(details), 0);
+  }
+  if (Number.isFinite(Number(fallbackCapacity))) {
+    return Math.max(Number(fallbackCapacity) - soldCount(details), 0);
+  }
+  return UNBOUNDED_LOCAL_REMAINING;
 }
 
 function usableWave(wave) {
@@ -126,76 +204,82 @@ function usableWave(wave) {
 }
 
 async function buildTestAvailability(config) {
-  const [activities, rawReleases] = await Promise.all([getActivities(), getReleases()]);
-  const allReleaseDetails = uniqueReleaseDetails(rawReleases);
-  const waves = [];
+  // Tito's widget test_mode plugin handles test checkout. For preview we now use
+  // the real customer-facing releases, so the preview mirrors the launch layout
+  // while transactions remain test transactions.
+  const rawReleases = await getReleases();
+  const allReleaseDetails = uniqueReleaseDetails(rawReleases)
+    .filter((release) => !release.archived && !isComplimentaryRelease(release) && !isLegacyTestRelease(release));
 
-  for (const wave of INTEGRATION_CONFIG_2026.tito.test.waves) {
-    const matches = activities.filter((activity) => normalise(activity?.name) === normalise(wave.activityName));
-    if (!matches.length) {
-      throw new HttpError(503, `Tito test Activity not found: "${wave.activityName}".`);
-    }
-    if (matches.length > 1) {
-      throw new HttpError(503, `More than one Tito test Activity is named "${wave.activityName}".`);
-    }
-    const activity = await getActivity(matches[0].id);
-    waves.push(activitySummary(wave, activity));
-  }
+  const superSaverDetails = configuredOrMatched(config.tito.releases.superSaver, allReleaseDetails, isSuperSaverRelease);
+  const advanceDetails = configuredOrMatched(config.tito.releases.advance, allReleaseDetails, isAdvanceRelease);
+  const standardDetails = configuredOrMatched(config.tito.releases.standard, allReleaseDetails, isStandardRelease);
+  const preschoolDetails = configuredOrMatched([config.tito.releases.preschool], allReleaseDetails, isPreschoolRelease);
+  const paidParkingDetails = configuredOrMatched([config.tito.releases.paidParking], allReleaseDetails, isPaidParking);
+  const blueBadgeDetails = configuredOrMatched([config.tito.releases.blueBadgeParking], allReleaseDetails, isBlueBadgeParking);
 
-  const used = new Set(waves.flatMap((wave) => wave.releases));
-  const unmatched = allReleaseDetails.filter((release) => !used.has(release.slug));
-
-  // In test mode, keep the existing named test Activities as the authoritative
-  // capacity waves, but also discover the real standalone releases now on sale.
-  // If Standard tickets are present outside the two test Activities, expose them
-  // as the final hidden band so the complete customer journey can be tested.
-  const standardDetails = unmatched.filter(isStandardRelease);
-  if (standardDetails.length) {
-    waves.push(staticGroup({
+  const waves = [
+    testWave({
+      key: "super-saver",
+      label: "Super Saver",
+      releaseDetails: superSaverDetails,
+      capacity: config.manifest.superSaverCapacity
+    }),
+    testWave({
+      key: "advance",
+      label: "Advance",
+      releaseDetails: advanceDetails,
+      capacity: config.manifest.advanceCapacity
+    }),
+    standardDetails.length ? staticGroup({
       key: "standard",
       label: "Standard",
       counterMode: "standard-static",
       releaseDetails: standardDetails,
-      capacity: config.manifest.eventCapacity,
-      remaining: config.manifest.eventCapacity
-    }));
-    standardDetails.forEach((release) => used.add(release.slug));
+      remaining: UNBOUNDED_LOCAL_REMAINING
+    }) : null
+  ].filter(Boolean);
+
+  if (!waves.length) {
+    throw new HttpError(503, "No customer admission releases could be identified. Check that the Super Saver, Advance and Standard tickets are on sale and named/configured as expected.");
   }
 
-  const remainingUnmatched = allReleaseDetails.filter((release) => !used.has(release.slug));
-  const preschoolDetails = remainingUnmatched.filter(isPreschoolRelease);
-  const paidParkingDetails = remainingUnmatched.filter(isPaidParking);
-  const blueBadgeDetails = remainingUnmatched.filter(isBlueBadgeParking);
+  // Pre-school is deliberately kept out of the paid price waves. A large local
+  // remaining value prevents the presentation layer from imposing a fake cap;
+  // Tito's own release/Activity limits remain authoritative. The front end
+  // replaces the generated counter with a static all-attendees reminder.
+  const preschool = preschoolDetails.length ? staticGroup({
+    key: "preschool",
+    label: "Everyone attending needs a ticket",
+    counterMode: "ticket-reminder",
+    releaseDetails: preschoolDetails,
+    remaining: UNBOUNDED_LOCAL_REMAINING
+  }) : null;
 
-  const standaloneGroups = [
-    staticGroup({
-      key: "preschool",
-      label: "Everyone attending needs a ticket",
-      counterMode: "ticket-reminder",
-      releaseDetails: preschoolDetails,
-      capacity: config.manifest.eventCapacity,
-      remaining: config.manifest.eventCapacity
-    })
-  ].filter(Boolean);
+  const generalParkingRemaining = releaseSpecificRemaining(paidParkingDetails, config.manifest.generalParkingCapacity);
+  const blueBadgeRemaining = releaseSpecificRemaining(blueBadgeDetails, config.manifest.blueBadgeReserve);
 
-  const parkingGroups = [
-    staticGroup({
-      key: "general-parking",
-      label: "Parking",
-      counterMode: "parking-general",
-      releaseDetails: paidParkingDetails,
-      capacity: config.manifest.generalParkingCapacity,
-      remaining: config.manifest.generalParkingCapacity
-    }),
-    staticGroup({
-      key: "blue-badge-parking",
-      label: "Blue Badge parking",
-      counterMode: "parking-accessible",
-      releaseDetails: blueBadgeDetails,
-      capacity: config.manifest.blueBadgeReserve,
-      remaining: config.manifest.blueBadgeReserve
-    })
-  ].filter(Boolean);
+  const generalParking = paidParkingDetails.length ? staticGroup({
+    key: "general-parking",
+    label: "Parking",
+    counterMode: "parking-general",
+    releaseDetails: paidParkingDetails,
+    capacity: config.manifest.generalParkingCapacity,
+    allocationCount: soldCount(paidParkingDetails),
+    remaining: generalParkingRemaining,
+    soldOut: releaseGroupSoldOut(paidParkingDetails) || generalParkingRemaining <= 0
+  }) : null;
+
+  const blueBadgeParking = blueBadgeDetails.length ? staticGroup({
+    key: "blue-badge-parking",
+    label: "Blue Badge parking",
+    counterMode: "parking-accessible",
+    releaseDetails: blueBadgeDetails,
+    capacity: config.manifest.blueBadgeReserve,
+    allocationCount: soldCount(blueBadgeDetails),
+    remaining: blueBadgeRemaining,
+    soldOut: releaseGroupSoldOut(blueBadgeDetails) || blueBadgeRemaining <= 0
+  }) : null;
 
   return {
     ok: true,
@@ -203,10 +287,7 @@ async function buildTestAvailability(config) {
     event: `${config.tito.accountSlug}/${config.tito.eventSlug}`,
     currentWave: waves.find(usableWave) || null,
     waves,
-    // fireworks-2026.js already treats parkingGroups as always-visible groups.
-    // Include the standalone pre-school release here so v19 can add its static
-    // ticket reminder without changing the proven core checkout script.
-    parkingGroups: [...standaloneGroups, ...parkingGroups]
+    parkingGroups: [preschool, generalParking, blueBadgeParking].filter(Boolean)
   };
 }
 
@@ -262,7 +343,7 @@ async function buildLiveAvailability(config) {
   advance.expired = now >= advanceCutoff;
 
   const standard = activitySummary(
-    { key: "standard", label: "Standard" },
+    { key: "standard", label: "Standard", counterMode: "standard-static" },
     eventActivity,
     pickReleaseDetails(config.tito.releases.standard, eventActivity, allReleaseDetails)
   );
@@ -273,8 +354,7 @@ async function buildLiveAvailability(config) {
     label: "Everyone attending needs a ticket",
     counterMode: "ticket-reminder",
     releaseDetails: pickReleaseDetails([config.tito.releases.preschool], eventActivity, allReleaseDetails),
-    capacity: standard.capacity,
-    remaining: standard.remaining,
+    remaining: UNBOUNDED_LOCAL_REMAINING,
     soldOut: Boolean(eventActivity?.sold_out) || standard.remaining === 0
   });
 
@@ -284,16 +364,17 @@ async function buildLiveAvailability(config) {
     pickReleaseDetails([config.tito.releases.paidParking], generalParkingActivity, allReleaseDetails)
   );
 
+  const blueBadgeDetails = pickReleaseDetails([config.tito.releases.blueBadgeParking], parkingActivity, allReleaseDetails);
+  const blueBadgeRemaining = releaseSpecificRemaining(blueBadgeDetails, config.manifest.blueBadgeReserve);
   const blueBadgeParking = staticGroup({
     key: "blue-badge-parking",
     label: "Blue Badge parking",
     counterMode: "parking-accessible",
-    releaseDetails: pickReleaseDetails([config.tito.releases.blueBadgeParking], parkingActivity, allReleaseDetails),
-    capacity: Number.isFinite(Number(parkingActivity?.capacity)) ? Number(parkingActivity.capacity) : null,
-    remaining: Number.isFinite(Number(parkingActivity?.capacity))
-      ? Math.max(Number(parkingActivity.capacity) - Number(parkingActivity?.allocation_count || 0), 0)
-      : null,
-    soldOut: Boolean(parkingActivity?.sold_out) || (Number(parkingActivity?.capacity || 0) > 0 && Number(parkingActivity?.allocation_count || 0) >= Number(parkingActivity.capacity))
+    releaseDetails: blueBadgeDetails,
+    capacity: config.manifest.blueBadgeReserve,
+    allocationCount: soldCount(blueBadgeDetails),
+    remaining: blueBadgeRemaining,
+    soldOut: releaseGroupSoldOut(blueBadgeDetails) || blueBadgeRemaining <= 0 || Boolean(parkingActivity?.sold_out)
   });
 
   const waves = [superSaver, advance, standard];
@@ -328,9 +409,6 @@ async function cachedAvailabilityPayload(config) {
         return payload;
       })
       .catch((error) => {
-        // Availability counters are advisory; Tito remains the system of record.
-        // If a refresh fails, prefer the last known-good state to a launch-time
-        // outage while the cached state is still reasonably recent.
         if (cachedPayload && Date.now() - cachedAt < 5 * 60_000) {
           return { ...cachedPayload, stale: true };
         }

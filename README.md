@@ -1,18 +1,16 @@
-# Wotton-under-Edge Firework Display 2026 — v19
+# Wotton-under-Edge Firework Display 2026 — v20
 
-V19 is a cumulative launch-preparation package. It deliberately leaves the established `js/fireworks-2026.js` checkout implementation untouched.
+V20 is cumulative over v19 and fixes the preview/ticket-presentation issues found during testing.
 
-It adds:
+Key changes:
 
-- shared Netlify/Tito availability caching and reduced visible-tab polling;
-- mandatory booking-reference verification and rate limiting for post-purchase writes;
-- a clean `wfd_responses` metadata namespace;
-- travel preference capture from the existing travel cards;
-- a standalone pre-school ticket reminder;
-- explicit general-parking sold-out messaging and separate Blue Badge messaging;
-- support for Super Saver → Advance → Standard front-end reveal while all Tito releases can remain available;
-- a post-purchase warning that confirmation/ticket emails come from Tito;
-- removal of the under-16 accompaniment restriction from the public FAQ and ticket terms;
-- a production availability implementation ready for the existing live Activity/release configuration fields.
+- the three travel cards now actively capture **Walk**, **Bus from Wotton**, **Bus from Charfield** or **Park**;
+- paid and Blue Badge parking are represented by one **Parking** travel card; selecting it explicitly does **not** reserve parking and directs the purchaser to choose the number/type of spaces in the ticket list;
+- Blue Badge wording now states that a valid Blue Badge must be displayed in the vehicle;
+- admission-wave counters are forced back to ticket wording, so they cannot inherit the parking wording;
+- the pre-school ticket has a static “Everyone attending needs a ticket” header and never exposes overall event capacity;
+- preview/test mode now uses the real customer-facing Super Saver, Advance, Standard, pre-school and parking releases rather than the obsolete Test Wave releases;
+- the paid price bands remain progressively revealed by the front end while all of those releases can remain on sale in Tito;
+- the v19 server-side caching, post-purchase write validation/rate limiting, `wfd_responses` metadata and Tito-email warning are retained.
 
-Tito remains the system of record for checkout, payment, ticket QR codes, confirmation emails and gate check-in.
+Tito remains the system of record for checkout, payment, confirmation emails, ticket QR codes, ticket capacity and gate check-in.

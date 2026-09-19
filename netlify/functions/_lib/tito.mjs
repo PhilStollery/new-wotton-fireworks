@@ -75,7 +75,10 @@ export async function getActivity(id, eventSlug) {
 }
 
 export async function getReleases(eventSlug) {
-  const body = await titoRequest(`${eventBase(eventSlug)}/releases?page[size]=1000`);
+  // Expand Activities so preview/test mode can group the real ticket releases
+  // without relying on the old Test Wave release names. Tito v3.1 hides nested
+  // resources by default; v3.0 safely ignores/accepts the expand parameter.
+  const body = await titoRequest(`${eventBase(eventSlug)}/releases?page[size]=1000&expand=activities`);
   return body?.releases || [];
 }
 

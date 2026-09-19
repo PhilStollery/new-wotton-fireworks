@@ -324,11 +324,11 @@ function inferCustomerReleaseGroups(config, allReleaseDetails, activities) {
   const advanceActivity = advanceDetails.length
     ? findLinkedActivity(advanceDetails, activities, {
         expectedCapacity: config.manifest.advanceCapacity,
-        patterns: [/release\s*2/, /\badvance\b/]
+        patterns: [/release\s*2\s*[-–—:]?\s*advance/, /release\s*2/, /\badvance\b/]
       })
     : findActivity(activities, {
         expectedCapacity: config.manifest.advanceCapacity,
-        patterns: [/release\s*2/, /\badvance\b/]
+        patterns: [/release\s*2\s*[-–—:]?\s*advance/, /release\s*2/, /\badvance\b/]
       });
 
   const standardActivity = standardDetails.length
@@ -470,19 +470,17 @@ async function buildTestAvailability(config) {
         : fallbackAdmissionWave({ key: "advance", label: "Advance", releaseDetails: groups.advanceDetails }))
     : null;
 
-  // Standard has its own 2,500-ticket commercial allocation. The Tito Activity
-  // currently tracks usage even if its capacity is left unlimited; the site
-  // therefore derives the limit from 3,500 total - 300 Super Saver - 700 Advance.
-  const standardCapacity = Math.max(0, Number(config.manifest.eventCapacity || 3500)
-    - Number(config.manifest.superSaverCapacity || 300)
-    - Number(config.manifest.advanceCapacity || 700));
+  // Standard is deliberately unlimited at release level. Its real limit is the
+  // remaining # Event Capacity, so complimentary and pre-school tickets naturally
+  // reduce the number of Standard admissions that can still be sold.
   const standard = groups.standardDetails.length
-    ? cappedActivitySummary(
-        { key: "standard", label: "Standard", kind: "admission", counterMode: "capacity" },
-        groups.standardActivity,
-        groups.standardDetails,
-        standardCapacity
-      )
+    ? (groups.eventActivity
+        ? activitySummary(
+            { key: "standard", label: "Standard", kind: "admission", counterMode: "event-capacity" },
+            groups.eventActivity,
+            groups.standardDetails
+          )
+        : fallbackAdmissionWave({ key: "standard", label: "Standard", releaseDetails: groups.standardDetails }))
     : null;
 
   // Preview/test checkout stays usable before the public sales opening time, but
@@ -518,6 +516,11 @@ async function buildTestAvailability(config) {
     event: `${config.tito.accountSlug}/${config.tito.eventSlug}`,
     currentWave: waves.find(usableWave) || null,
     waves,
+    admissionCapacity: groups.eventActivity ? {
+      capacity: Number(groups.eventActivity?.capacity ?? config.manifest.eventCapacity ?? 3500),
+      allocationCount: Number(groups.eventActivity?.allocation_count ?? groups.eventActivity?.allocationCount ?? 0),
+      remaining: Math.max(0, Number(groups.eventActivity?.capacity ?? config.manifest.eventCapacity ?? 3500) - Number(groups.eventActivity?.allocation_count ?? groups.eventActivity?.allocationCount ?? 0))
+    } : null,
     parkingGroups: [preschool, ...parking.groups].filter(Boolean),
     parking: parking.summary
   };
@@ -578,14 +581,10 @@ async function buildLiveAvailability(config) {
   );
   advance.expired = now >= advanceCutoff;
 
-  const standardCapacity = Math.max(0, Number(config.manifest.eventCapacity || 3500)
-    - Number(config.manifest.superSaverCapacity || 300)
-    - Number(config.manifest.advanceCapacity || 700));
-  const standard = cappedActivitySummary(
-    { key: "standard", label: "Standard", kind: "admission", counterMode: "capacity" },
-    standardActivity,
-    standardDetails,
-    standardCapacity
+  const standard = activitySummary(
+    { key: "standard", label: "Standard", kind: "admission", counterMode: "event-capacity" },
+    eventActivity,
+    standardDetails
   );
   standard.expired = now >= admissionClose;
 
@@ -614,6 +613,11 @@ async function buildLiveAvailability(config) {
     salesState: now < salesOpen ? "not_open" : (now >= admissionClose ? "closed" : "open"),
     currentWave,
     waves,
+    admissionCapacity: {
+      capacity: Number(eventActivity?.capacity ?? config.manifest.eventCapacity ?? 3500),
+      allocationCount: Number(eventActivity?.allocation_count ?? eventActivity?.allocationCount ?? 0),
+      remaining: Math.max(0, Number(eventActivity?.capacity ?? config.manifest.eventCapacity ?? 3500) - Number(eventActivity?.allocation_count ?? eventActivity?.allocationCount ?? 0))
+    },
     parkingGroups: [preschool, ...parking.groups].filter(Boolean),
     parking: parking.summary
   };

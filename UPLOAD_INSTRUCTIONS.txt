@@ -1,98 +1,58 @@
-Wotton Fireworks 2026 Tito integration package v24
+Wotton Fireworks 2026 Tito integration package v25
 ===================================================
 
-PURPOSE
--------
-V24 is cumulative over v23. It fixes the price-band selection/spill behaviour,
-restores ticket names and quantity alignment, simplifies parking to a single
-150-space Activity, refactors the price comparison table, and applies the agreed
-dark-theme/panel presentation.
-
-FILES TO REPLACE
-----------------
-/_redirects
-/terms.html
-/js/event-data-2026.js
-/netlify/functions/ticket-availability.mjs
-/netlify/functions/post-purchase-preference.mjs
-/netlify/functions/_lib/tito.mjs
-/netlify/functions/_lib/config.mjs
-/README.md
-/VERSION.txt
+V25 IS CUMULATIVE OVER V24
+--------------------------
+Upload the package contents over the 2026 branch, preserving the paths shown.
 
 FILES TO ADD / REPLACE
 ----------------------
-/docs/integration-v24.md
+Replace:
+  /js/event-data-2026.js
+  /netlify/functions/ticket-availability.mjs
+  /netlify/functions/_lib/config.mjs
+  /netlify/functions/_lib/tito.mjs
+  /netlify/functions/post-purchase-preference.mjs
+  /terms.html
+  /_redirects
+  /README.md
+  /VERSION.txt
+
+Add/replace:
+  /docs/integration-v25.md
+
+Delete if present:
+  /docs/integration-v24.md
 
 DO NOT REPLACE
 --------------
-/netlify/functions/_lib/integration-config-2026.mjs
+Do not overwrite /netlify/functions/_lib/integration-config-2026.mjs. Existing Tito IDs/slugs entered there must remain intact.
 
-That file contains operational Tito IDs/slugs and may already have been edited
-separately.
+TITO ACTIVITY MODEL EXPECTED BY V25
+-----------------------------------
+# Event Capacity          3,500 overall admissions
+# Parking Capacity          150 all parking tickets
+Release 1 - Super Saver     300
+Release 2 - Advance         700
+Release 3 - Standard        unlimited at release level
 
-TITO ACTIVITY SETUP TO CHECK
-----------------------------
-The current intended Activity structure is:
+All admission types that count toward attendance, including comps/pre-school where appropriate, should also count against # Event Capacity. Standard therefore uses remaining Event Capacity rather than a fixed 2,500 website cap.
 
-  # Event Capacity              3,500
-  # Parking Capacity              150
-  Release 1 - Super Saver         300
-  Advance Activity                700
-  Release 3 - Standard          2,500 recommended
+QUICK TEST
+----------
+1. Confirm the What's On chips are readable (dark text on bright yellow) and programme times/body copy have adequate contrast.
+2. Confirm the Prices table shows Pre-school first, then Primary / Secondary & Sixth Form / Adult across Super Saver / Advance / Standard.
+3. Confirm the separate Parking tickets table has only Ticket + Price columns and its Price header says “150 spaces until sold out or 7.30pm Saturday 7th November”.
+4. Confirm Step 2 choice buttons sit at the bottom of all three travel cards.
+5. Confirm Step 3 and the Tito selector are dark.
+6. Confirm each ticket retains its visible ticket name.
+7. Confirm the - / quantity / + controls form one right-aligned cluster.
+8. Set Super Saver to its available limit and add one more of a ticket type. Confirm the extra ticket appears in the matching Advance type without leaving Super Saver above its limit. Repeat Advance -> Standard.
+9. Confirm after automatic correction Tito's Continue button becomes usable when the selection is valid.
+10. Confirm Standard availability follows remaining # Event Capacity. Issue/hold a comp or pre-school test admission and verify Standard remaining falls accordingly.
+11. Confirm paid + Blue Badge parking share one 150-space counter.
+12. Confirm “A valid Blue Badge must be displayed in the vehicle.” is within the Blue Badge ticket description.
+13. Confirm no rendered ticket description says under-16s must be accompanied.
+14. Complete a test checkout and confirm the post-purchase Tito email reminder still appears.
 
-Attach every attendee/admission ticket (including pre-school) to # Event Capacity.
-Attach all paid and Blue Badge parking releases to # Parking Capacity.
-Attach each paid admission price band's releases to its own release Activity.
-
-IMPORTANT: the supplied screenshot/list shows the 700-ticket Activity named
-"Release 2 - Super Saver". V24 identifies it from the attached Advance releases
-and its 700 capacity, so testing will still work, but rename it to
-"Release 2 - Advance" when convenient to avoid operational confusion.
-
-IMPORTANT: the current Standard Activity is shown as unlimited. V24 deliberately
-presents/enforces a 2,500 Standard allocation in the browser, but Tito should
-also have Release 3 - Standard set to 2,500 before public launch so Tito itself
-enforces the same limit even if somebody bypasses the website UI.
-
-There is no longer a separate general-parking Activity or a 30-space Blue Badge
-reserve. Paid and Blue Badge parking consume the same 150-space Activity.
-
-NO NETLIFY UI CHANGES REQUIRED
-------------------------------
-The existing TITO_API_TOKEN_TEST and TITO_API_TOKEN_LIVE variables remain the
-only secrets.
-
-V24 TEST CHECKLIST
-------------------
-1. Navigation should read: What's on / Prices / Tickets / Plan your visit / FAQ.
-2. Every main section should use the dark theme.
-3. Panels/cards should have a small Round Table roundel at top-right.
-4. Prices should show one row per admission type and three columns:
-   Super Saver / Advance / Standard. The column headings should show 300 / 700 /
-   2,500 and their ordinal closing dates.
-5. Pre-school and parking should appear as compact "Other tickets" rows beneath
-   the admission price matrix.
-6. Every ticket row in the selector must show its ticket name.
-7. Quantity controls must sit on the right of each ticket row.
-8. Pre-school should have the simple header "Everyone attending needs a ticket"
-   with no event-capacity figure.
-9. Super Saver / Advance / Standard counters should start from Tito's Activity
-   usage and reduce immediately as quantities are selected in the browser.
-10. At a band boundary, adding one more ticket must leave the full band exactly
-    at its limit and add the extra ticket to the matching ticket type in the next
-    band. The next band's panel must be revealed immediately.
-11. Repeat the boundary test from Advance into Standard. Standard should start
-    from a maximum allocation of 2,500, never 3,500.
-12. If an automatic transfer happens, a brief message should identify the ticket
-    type and the band it moved into. Continue should remain usable once the
-    quantities are valid.
-13. Parking should show one shared remaining count from the 150-space Parking
-    Activity. Selecting either paid or Blue Badge parking must reduce that same
-    count.
-14. The Blue Badge ticket row must state that a valid Blue Badge must be displayed.
-15. Travel selection should remain Walking / Bus from Wotton / Bus from Charfield /
-    Driving after selection and should be described only as demand-planning data.
-16. Confirm no public page contains an under-16 accompaniment requirement.
-17. Complete a test purchase and confirm Tito checkout, confirmation email/QR
-    behaviour and the post-purchase follow-up still work normally.
+No new Netlify environment variables are required.

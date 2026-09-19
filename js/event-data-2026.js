@@ -225,7 +225,10 @@ window.FIREWORKS_EVENT = {
       .prices-section{background:var(--grey)!important}
       .price-matrix-card{margin-top:20px;border:1px solid #54544c;border-radius:16px;background:#292925;padding:18px 18px 14px}
       .price-table-wrap{overflow-x:auto;padding-top:4px}
-      .price-table{width:100%;border-collapse:collapse;min-width:680px;color:#fff;font-size:.88rem}
+      .price-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:680px;color:#fff;font-size:.88rem}
+      .price-ticket-col{width:25%}
+      .price-band-col{width:25%}
+      .price-parking-value-col{width:75%}
       .price-table th,.price-table td{padding:10px 12px;text-align:center;vertical-align:middle;border-bottom:1px solid #4c4c45}
       .price-table th:first-child,.price-table td:first-child{text-align:left}
       .price-table thead th{font-size:.8rem;color:#fff;background:transparent}
@@ -247,7 +250,7 @@ window.FIREWORKS_EVENT = {
       .ticket-step-head h3{margin:0 0 5px;color:#fff;font-size:clamp(1.3rem,2.2vw,1.72rem)}
       .ticket-step-head p{margin:0;color:rgba(255,255,255,.76);font-size:.9rem;line-height:1.5}
       .ticket-step-panel .ticket-box{margin:0!important;border-radius:13px!important;box-shadow:none!important;background:#20201e!important;color:#fff!important;border:1px solid #4c4c45!important;padding:0!important;overflow:hidden!important}
-      .ticket-step-panel .ticket-selector-shell{width:100%!important;max-width:none!important;margin:0!important;background:#20201e!important}
+      .ticket-step-panel .ticket-selector-shell{width:100%!important;max-width:none!important;margin:0!important;background:#20201e!important;border:1px solid #4c4c45!important}
       .ticket-step-panel #tito-mount,
       .ticket-step-panel #tito-mount tito-widget,
       .ticket-step-panel #tito-mount tito-widget>div,
@@ -299,8 +302,15 @@ window.FIREWORKS_EVENT = {
       #tito-mount .wfd-quantity-wrap{position:absolute!important;right:20px!important;top:50%!important;transform:translateY(-50%)!important;margin:0!important;display:flex!important;gap:7px!important;align-items:center!important;justify-content:flex-end!important;text-align:right!important;white-space:nowrap!important;z-index:3!important}
       #tito-mount .wfd-quantity-wrap>*{margin:0!important;position:static!important;transform:none!important;float:none!important}
       #tito-mount .wfd-quantity-wrap [class*="decrement-quantity"],#tito-mount .wfd-quantity-wrap [class*="increment-quantity"]{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+      #tito-mount .tito-release--decrement-quantity>a:not([class*="disabled"]),
+      #tito-mount a.tito-release--decrement-quantity--link:not(.tito-release--decrement-quantity--link--disabled),
+      #tito-mount .wfd-quantity-minus:not([aria-disabled="true"]){background:#B8B9B5!important;color:#1D1D1A!important}
+      #tito-mount a.tito-release--decrement-quantity--link--disabled,
+      #tito-mount .tito-release--decrement-quantity>a[class*="disabled"],
+      #tito-mount .tito-release--decrement-quantity[class*="disabled"]>a,
+      #tito-mount .wfd-quantity-minus[aria-disabled="true"]{background:#4F504C!important;color:#A9AAA5!important;opacity:1!important;cursor:default!important}
       #tito-mount .wfd-blue-badge-note{display:none!important}
-      #tito-mount .wfd-ticket-description-note{display:block!important;margin:.35rem 0 0!important;color:rgba(255,255,255,.8)!important;font-size:.86rem!important;line-height:1.45!important;max-width:700px!important}
+      #tito-mount .wfd-ticket-description-note{display:block!important;margin:.35rem 0 0!important;color:inherit!important;font:inherit!important;font-size:inherit!important;line-height:inherit!important;max-width:700px!important}
       #tito-mount .wfd-capacity-message{margin:12px 20px;padding:10px 12px;border-radius:10px;background:#3a3123;color:#FFE0A5;font-size:.84rem;line-height:1.42;border:1px solid #6c5731}
       #tito-mount .wfd-capacity-message[hidden]{display:none!important}
       #tito-mount input.wfd-needs-reduction,#tito-mount select.wfd-needs-reduction{outline:3px solid #FF8C7C!important;outline-offset:2px!important;background:#FFF0ED!important}
@@ -325,13 +335,13 @@ window.FIREWORKS_EVENT = {
 
       /* Capacity corrections remain visible until the customer acknowledges them. */
       #tito-mount .wfd-capacity-message{display:flex;align-items:center;justify-content:space-between;gap:14px}
-      #tito-mount .wfd-capacity-message.wfd-capacity-message-inline{margin:0 20px 12px!important}
+      #tito-mount .wfd-capacity-message.wfd-capacity-message-inline{margin:8px 20px 12px!important}
       #tito-mount .wfd-capacity-message-copy{min-width:0}
       #tito-mount .wfd-capacity-message-ack{flex:0 0 auto;appearance:none;border:1px solid #FBC15C;background:#FBC15C;color:#1D1D1A;border-radius:999px;padding:.38rem .72rem;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
       #tito-mount .wfd-capacity-message-ack:hover,#tito-mount .wfd-capacity-message-ack:focus-visible{filter:brightness(.96);outline:2px solid #fff;outline-offset:2px}
 
       /* FAQ is one rounded panel with clear disclosure triangles rather than +/- controls. */
-      .faq-wrap{max-width:none!important;width:100%!important}
+      .faq-wrap{max-width:var(--max)!important}
       .faq-list{position:relative!important;overflow:hidden!important;width:100%!important;border:1px solid #54544c!important;border-radius:16px!important;background:#292925!important}
       .faq-list::after{content:""!important;display:block!important;position:absolute!important;top:14px!important;right:14px!important;width:27px!important;height:27px!important;background:url('/images/2026/rtgbi-roundel-white.png') center/contain no-repeat!important;opacity:.68!important;pointer-events:none!important;z-index:3!important}
       .faq-list details{position:relative!important;overflow:visible!important;border:0!important;border-bottom:1px solid #54544c!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
@@ -666,7 +676,10 @@ window.FIREWORKS_EVENT = {
 
   function descriptionContainer(row) {
     const direct=row.querySelector('.tito-release-description,[class*="release-description"],[class*="description"]');
-    if(direct && !direct.closest('.wfd-quantity-wrap')) return direct;
+    if(direct && !direct.closest('.wfd-quantity-wrap')){
+      const paragraphs=[...direct.querySelectorAll('p,span')].filter((el)=>String(el.textContent||'').trim().length>0);
+      return paragraphs.at(-1)||direct;
+    }
     const candidates=[...row.querySelectorAll('p,div,span')].filter((el)=>{
       if(el.closest('.wfd-quantity-wrap')||el.classList.contains('wfd-ticket-name')||el.classList.contains('wfd-group-counter'))return false;
       const text=String(el.textContent||'').trim();
@@ -726,8 +739,8 @@ window.FIREWORKS_EVENT = {
     const familyRows=ordered.map((item)=>`<tr><th scope="row">${escapeHtml(item.name)}</th><td class="price-money">${escapeHtml(item.prices['super-saver']||'—')}</td><td class="price-money">${escapeHtml(item.prices.advance||'—')}</td><td class="price-money">${escapeHtml(item.prices.standard||'—')}</td></tr>`).join('');
     const parking=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='parking');
     const parkingRows=(parking?.releaseDetails||[]).map((r)=>`<tr><th scope="row">${escapeHtml(cleanTicketTitle(r.title,parking.label))}</th><td class="price-money">${escapeHtml(money(r))}</td></tr>`).join('');
-    const admission=`<div class="price-extra-title">Admission Tickets</div><div class="price-table-wrap" role="region" aria-label="Admission prices: scroll horizontally to compare all prices" tabindex="0"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
-    const parkingTable=parkingRows?`<div class="price-extra-title">Parking tickets</div><div class="price-table-wrap" role="region" aria-label="Parking prices: scroll horizontally for details" tabindex="0"><table class="price-table parking-price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Price<small>150 spaces until sold out or 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${parkingRows}</tbody></table></div>`:'';
+    const admission=`<div class="price-extra-title">Admission Tickets</div><div class="price-table-wrap" role="region" aria-label="Admission prices: scroll horizontally to compare all prices" tabindex="0"><table class="price-table"><colgroup><col class="price-ticket-col"><col class="price-band-col"><col class="price-band-col"><col class="price-band-col"></colgroup><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>Remaining event capacity<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${preschoolRow}${familyRows}</tbody></table></div>`;
+    const parkingTable=parkingRows?`<div class="price-extra-title">Parking tickets</div><div class="price-table-wrap" role="region" aria-label="Parking prices: scroll horizontally for details" tabindex="0"><table class="price-table parking-price-table"><colgroup><col class="price-ticket-col"><col class="price-parking-value-col"></colgroup><thead><tr><th scope="col">Ticket</th><th scope="col">Price<small>150 spaces until sold out or 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${parkingRows}</tbody></table></div>`:'';
     const html=`${admission}${parkingTable}`;
     if(root.innerHTML!==html)root.innerHTML=html;
   }

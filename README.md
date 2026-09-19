@@ -1,23 +1,42 @@
-# Wotton-under-Edge Firework Display 2026 — Tito integration v23
+# Wotton-under-Edge Firework Display 2026 — Tito integration v24
 
-V23 is cumulative over v22 and is the current test package.
+V24 is cumulative over v23 and is the current test package.
 
-It keeps Tito responsible for checkout, payment, ticket emails, QR codes and gate check-in, while the site handles presentation and live availability.
+## Ticket Activities
 
-Key changes in v23:
+The site now expects the simplified Tito Activity model:
 
-- Shared Activity remaining counts now drive Super Saver, Advance and Standard counters.
-- Browser selections reduce those counters locally; selection beyond a band's remaining capacity is carried into the same ticket type in the next band.
-- General parking starts from 120 spaces within the 150-space Parking Activity. Blue Badge bookings above the protected 30-space reserve reduce the general allocation.
-- Pre-school has a simple non-numeric "Everyone attending needs a ticket" header.
-- Paid-band headers show the band name plus remaining availability and closing date, rather than generic "left at this price" wording.
-- Admission release descriptions are visually suppressed in the selector so the band/deadline information is not duplicated.
-- Blue Badge eligibility wording is kept with the Blue Badge ticket row, not in the group header.
-- A new Prices section presents all customer ticket releases, prices, allocations and closing dates before the Tickets section.
-- Tickets are presented as three panels: Book for Wotton-under-Edge; Decide how you'll get there; Get your tickets.
-- Travel planning remains optional planning data only. It is not a commitment and customers do not need to report later changes.
-- Travel option labels remain Walking / Bus from Wotton / Bus from Charfield / Driving after selection.
-- Previous child-accompaniment wording has been removed from the public site and terms.
-- Visible dates use ordinals.
+- `# Event Capacity` — 3,500 attendees
+- `# Parking Capacity` — 150 spaces shared by paid and Blue Badge parking
+- `Release 1 - Super Saver` — 300 paid admission tickets
+- the 700-ticket Activity attached to Advance releases — Advance allocation
+- `Release 3 - Standard` — Standard allocation usage
 
-No new Netlify secrets are required.
+The browser derives the Standard commercial allocation as 2,500 tickets
+(3,500 - 300 - 700), so the public counter never exposes the overall event
+capacity as the Standard allocation.
+
+## Key v24 changes
+
+- Restores a clear visible ticket name on every Tito ticket row.
+- Quantity controls are right aligned.
+- When a paid price band is full, an extra ticket is kept at the current band's
+  limit and moved to the matching ticket type in the next band.
+- Super Saver, Advance and Standard browser counters reduce as tickets are
+  selected locally, starting from the current Activity values returned by Tito.
+- Standard is capped/displayed as 2,500 tickets.
+- Parking is one shared 150-space pool for paid and Blue Badge parking.
+- A brief status message explains any automatic spill to the next price band.
+- The Prices section is a compact matrix: one row per admission ticket type and
+  three price columns for Super Saver / Advance / Standard. Band limits and
+  closing dates sit in the column headings.
+- Pre-school and parking tickets are shown separately beneath the price matrix.
+- Removes the old internal-facing price-table note.
+- Restores roundels to the top-right of panels/cards.
+- Step 3 now uses the same dark panel treatment as Steps 1 and 2.
+- All main content sections use the dark visual theme.
+- Location and beneficiary/support panels are deliberately quieter.
+- Child-accompaniment restrictions are absent from the current public copy.
+
+Tito still owns checkout, payment, order holds, confirmation emails, ticket QR
+codes and gate check-in.

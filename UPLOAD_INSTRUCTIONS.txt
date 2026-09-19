@@ -1,11 +1,12 @@
-Wotton Fireworks 2026 Tito integration package v23
+Wotton Fireworks 2026 Tito integration package v24
 ===================================================
 
 PURPOSE
 -------
-V23 is cumulative over v22. It fixes the shared Activity counting/reveal logic,
-parking reserve calculation and selector presentation, and reorganises the
-public ticket journey into Prices + three booking steps.
+V24 is cumulative over v23. It fixes the price-band selection/spill behaviour,
+restores ticket names and quantity alignment, simplifies parking to a single
+150-space Activity, refactors the price comparison table, and applies the agreed
+dark-theme/panel presentation.
 
 FILES TO REPLACE
 ----------------
@@ -21,52 +22,77 @@ FILES TO REPLACE
 
 FILES TO ADD / REPLACE
 ----------------------
-/docs/integration-v23.md
+/docs/integration-v24.md
 
 DO NOT REPLACE
 --------------
 /netlify/functions/_lib/integration-config-2026.mjs
 
-That file contains the operational Tito IDs/slugs and may already have been
-edited separately.
+That file contains operational Tito IDs/slugs and may already have been edited
+separately.
 
-NO NETLIFY UI CHANGES ARE REQUIRED
-----------------------------------
+TITO ACTIVITY SETUP TO CHECK
+----------------------------
+The current intended Activity structure is:
+
+  # Event Capacity              3,500
+  # Parking Capacity              150
+  Release 1 - Super Saver         300
+  Advance Activity                700
+  Release 3 - Standard          2,500 recommended
+
+Attach every attendee/admission ticket (including pre-school) to # Event Capacity.
+Attach all paid and Blue Badge parking releases to # Parking Capacity.
+Attach each paid admission price band's releases to its own release Activity.
+
+IMPORTANT: the supplied screenshot/list shows the 700-ticket Activity named
+"Release 2 - Super Saver". V24 identifies it from the attached Advance releases
+and its 700 capacity, so testing will still work, but rename it to
+"Release 2 - Advance" when convenient to avoid operational confusion.
+
+IMPORTANT: the current Standard Activity is shown as unlimited. V24 deliberately
+presents/enforces a 2,500 Standard allocation in the browser, but Tito should
+also have Release 3 - Standard set to 2,500 before public launch so Tito itself
+enforces the same limit even if somebody bypasses the website UI.
+
+There is no longer a separate general-parking Activity or a 30-space Blue Badge
+reserve. Paid and Blue Badge parking consume the same 150-space Activity.
+
+NO NETLIFY UI CHANGES REQUIRED
+------------------------------
 The existing TITO_API_TOKEN_TEST and TITO_API_TOKEN_LIVE variables remain the
 only secrets.
 
-V23 TEST CHECKLIST
+V24 TEST CHECKLIST
 ------------------
 1. Navigation should read: What's on / Prices / Tickets / Plan your visit / FAQ.
-2. Prices should show a table before the Tickets section containing every
-   customer-facing ticket release, its current Tito price, allocation and date.
-3. Tickets should be split into three panels:
-   Step 1 Book for Wotton-under-Edge
-   Step 2 Decide how you'll get there
-   Step 3 Get your tickets
-4. Travel options should show no orange price text. Selection labels must remain
-   Walking / Bus from Wotton / Bus from Charfield / Driving and the explanatory
-   note must say the choice is only for demand planning.
-5. Pre-school should have only the header "Everyone attending needs a ticket" —
-   no event-capacity number and no explanatory sentence in the header.
-6. Super Saver and Advance counters must use the remaining number from their Tito
-   Activities. Standard must use the remaining number from the overall event
-   Activity.
-7. Paid-band headers should read e.g. "Super Saver Tickets" with the right-hand
-   status "### available until 5pm Monday 5th October" or "Sold Out".
-8. Select tickets until the current band has no local headroom. The next band
-   should reveal. One more ticket should be moved into the matching ticket type
-   in the next band. Repeat at the Advance/Standard boundary.
-9. Parking should begin with 120 general spaces. Blue Badge selections up to the
-   protected 30 should not reduce that figure; selections/bookings above 30 should.
-10. The Blue Badge group header must not contain the valid-badge warning. The
-    Blue Badge ticket row must state that a valid Blue Badge must be displayed.
-11. Confirm the previous child-accompaniment wording is absent from the FAQ and ticket terms.
-12. Complete a test purchase. Checkout/payment behaviour must remain Tito's.
-13. Confirm the post-purchase panel tells the customer to expect ticket emails
-    from Tito and that optional responses still save.
-
-IMPORTANT
----------
-Test mode still uses the real customer-facing releases with Tito's test_mode
-widget. It does not use the old Test Wave releases.
+2. Every main section should use the dark theme.
+3. Panels/cards should have a small Round Table roundel at top-right.
+4. Prices should show one row per admission type and three columns:
+   Super Saver / Advance / Standard. The column headings should show 300 / 700 /
+   2,500 and their ordinal closing dates.
+5. Pre-school and parking should appear as compact "Other tickets" rows beneath
+   the admission price matrix.
+6. Every ticket row in the selector must show its ticket name.
+7. Quantity controls must sit on the right of each ticket row.
+8. Pre-school should have the simple header "Everyone attending needs a ticket"
+   with no event-capacity figure.
+9. Super Saver / Advance / Standard counters should start from Tito's Activity
+   usage and reduce immediately as quantities are selected in the browser.
+10. At a band boundary, adding one more ticket must leave the full band exactly
+    at its limit and add the extra ticket to the matching ticket type in the next
+    band. The next band's panel must be revealed immediately.
+11. Repeat the boundary test from Advance into Standard. Standard should start
+    from a maximum allocation of 2,500, never 3,500.
+12. If an automatic transfer happens, a brief message should identify the ticket
+    type and the band it moved into. Continue should remain usable once the
+    quantities are valid.
+13. Parking should show one shared remaining count from the 150-space Parking
+    Activity. Selecting either paid or Blue Badge parking must reduce that same
+    count.
+14. The Blue Badge ticket row must state that a valid Blue Badge must be displayed.
+15. Travel selection should remain Walking / Bus from Wotton / Bus from Charfield /
+    Driving after selection and should be described only as demand-planning data.
+16. Confirm no public page contains an under-16 accompaniment requirement.
+17. Complete a test purchase and confirm Tito checkout, confirmation email/QR
+    behaviour and the post-purchase follow-up still work normally.

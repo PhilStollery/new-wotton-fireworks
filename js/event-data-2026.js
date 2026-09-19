@@ -82,7 +82,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       title: "Blue Badge parking",
-      copy: "Blue Badge parking is free but must still be reserved while booking so an accessible space is protected for you. A valid Blue Badge must be displayed in the vehicle."
+      copy: "Blue Badge parking is free but must still be booked. Blue Badge and paid parking use the same 150-space parking allocation. A valid Blue Badge must be displayed in the vehicle."
     },
     {
       title: "Outdoor event",
@@ -121,11 +121,11 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "How does Blue Badge parking work?",
-      a: "Blue Badge parking is free, but please reserve it while booking so we can keep an accessible space available for you. A valid Blue Badge must be displayed in the vehicle."
+      a: "Blue Badge parking is free but must still be booked. Paid and Blue Badge parking use the same 150-space allocation. A valid Blue Badge must be displayed in the vehicle."
     },
     {
-      q: "What happens if general parking sells out?",
-      a: "The amount of parking is constrained by the space available on site. Once the general allocation is full, we cannot safely fit in additional unbooked cars, so please walk or use the free event bus if you can. Blue Badge spaces are protected separately from the general allocation."
+      q: "What happens if parking sells out?",
+      a: "Paid and Blue Badge parking use the same 150-space allocation. Once it is full, no further parking can be booked, so please walk or use the free event bus if you can."
     },
     {
       q: "How does the free bus work?",
@@ -162,10 +162,11 @@ window.FIREWORKS_EVENT = {
   ]
 };
 
-/* v23 presentation and availability layer.
-   This runs before the established deferred ticket integration. Tito still owns
-   checkout/payment; this layer handles presentation, shared-activity counters,
-   progressive reveal/spillover and planning metadata. */
+/* v24 presentation and availability layer.
+   Tito remains responsible for checkout/payment. This layer presents the ticket
+   bands, keeps browser selections within each shared Activity allocation, moves
+   genuine overflow to the matching ticket in the next band, and captures an
+   optional travel-planning preference. */
 (() => {
   const TRAVEL_KEY = 'wfdTravelPreference2026';
   const nativeFetch = window.fetch.bind(window);
@@ -176,14 +177,15 @@ window.FIREWORKS_EVENT = {
   let postPurchaseWriteSeen = false;
   let travelAutosaveTimer = null;
   let observer = null;
-  let delegatedTravelEventsInstalled = false;
   let pageStructureReady = false;
+  let travelEventsInstalled = false;
   let spillHandlersInstalled = false;
+  let messageTimer = null;
 
-  const DEADLINES = Object.freeze({
-    'super-saver': '5pm Monday 5th October',
-    advance: '5pm Monday 26th October',
-    standard: '7.30pm Saturday 7th November'
+  const BAND_META = Object.freeze({
+    'super-saver': { label: 'Super Saver', limit: 300, deadline: '5pm Monday 5th October' },
+    advance: { label: 'Advance', limit: 700, deadline: '5pm Monday 26th October' },
+    standard: { label: 'Standard', limit: 2500, deadline: '7.30pm Saturday 7th November' }
   });
 
   function escapeHtml(value) {
@@ -192,99 +194,103 @@ window.FIREWORKS_EVENT = {
     })[character]);
   }
 
-  function readTravel() {
-    if (travelValue) return travelValue;
-    try { travelValue = String(localStorage.getItem(TRAVEL_KEY) || ''); }
-    catch { travelValue = ''; }
-    return travelValue;
-  }
-
-  function saveTravel(value) {
-    travelValue = String(value || '');
-    try { localStorage.setItem(TRAVEL_KEY, travelValue); } catch { /* optional */ }
-    updateTravelControls();
-  }
-
-  function preferenceOptions(item) {
-    return Array.isArray(item?.preferenceOptions) ? item.preferenceOptions : [];
-  }
-
-  function ensureV23Styles() {
-    if (document.getElementById('wfd-v23-styles')) return;
+  function ensureStyles() {
+    if (document.getElementById('wfd-v24-styles')) return;
     const style = document.createElement('style');
-    style.id = 'wfd-v23-styles';
+    style.id = 'wfd-v24-styles';
     style.textContent = `
-      /* Smaller explanatory copy beneath the main section headings. */
-      .experience-heading>p:not(.kicker),.ticket-heading>p:not(.kicker),.prices-heading>p:not(.kicker){font-size:1rem!important;line-height:1.62!important;max-width:760px}
+      /* One dark visual language across the information sections. */
+      main>.section,.section-white,.section-yellow,.prices-section{background:var(--grey)!important;color:#fff!important}
+      main>.section .section-heading h2,main>.section .section-heading h3,main>.section .section-heading p,.contact h2,.contact p{color:#fff!important}
+      main>.section .kicker,main>.section .kicker-dark{color:var(--yellow)!important}
+      main>.section .section-heading>p:not(.kicker){font-size:.92rem!important;line-height:1.55!important;max-width:760px;color:rgba(255,255,255,.72)!important}
+      .experience-heading>p:not(.kicker),.ticket-heading>p:not(.kicker),.prices-heading>p:not(.kicker){font-size:.92rem!important;line-height:1.55!important;max-width:760px}
+      .programme-panel,.visit-card,.entrance-callout,.venue-map-card,.faq-list details,.contact{background:#292925!important;color:#fff!important;border-color:#45453E!important;box-shadow:none!important}
+      .programme-panel p,.visit-card p,.entrance-callout p,.venue-map-card p,.faq-list details p,.faq-list summary,.contact p{color:rgba(255,255,255,.74)!important}
+      .faq-list summary{color:#fff!important}
+      .section-yellow a:not(.button){color:#fff!important}
 
-      /* Dedicated Prices section. */
-      .prices-section{background:#fff}
-      .price-table-wrap{overflow-x:auto;margin-top:24px;border:1px solid var(--border);border-radius:16px;background:#fff}
-      .price-table{width:100%;border-collapse:collapse;min-width:760px;color:var(--grey);font-size:.92rem}
-      .price-table th,.price-table td{padding:13px 15px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
-      .price-table thead th{background:#F6F0E2;font-size:.76rem;text-transform:uppercase;letter-spacing:.06em;color:#6B6254}
-      .price-table tbody tr:last-child td{border-bottom:0}
-      .price-table .price-band{font-weight:800;white-space:nowrap}
+      /* Round Table roundel: every principal panel/card gets a subtle mark. */
+      .ticket-step-panel,.price-matrix-card,.programme-panel,.travel-choice,.visit-card,.entrance-callout,.venue-map-card,.faq-list details,.location-check-card,.source-support-card,.contact{position:relative!important;overflow:hidden}
+      .ticket-step-panel::after,.price-matrix-card::after,.programme-panel::after,.travel-choice::after,.visit-card::after,.entrance-callout::after,.venue-map-card::after,.faq-list details::after,.location-check-card::after,.source-support-card::after,.contact::after{
+        content:""!important;display:block!important;position:absolute!important;top:14px!important;right:14px!important;width:27px!important;height:27px!important;background:url('/images/2026/rtgbi-roundel-white.png') center/contain no-repeat!important;opacity:.58!important;pointer-events:none!important;z-index:1!important
+      }
+      .programme-panel::after,.visit-card::after{opacity:.72!important}
+      .location-check-card::after,.source-support-card::after{width:18px!important;height:18px!important;top:10px!important;right:10px!important;opacity:.4!important}
+
+      /* Prices: compact comparison matrix, not an operational report. */
+      .prices-section{background:var(--grey)!important}
+      .price-matrix-card{margin-top:20px;border:1px solid #45453E;border-radius:16px;background:#292925;padding:18px 18px 14px}
+      .price-table-wrap{overflow-x:auto;padding-top:4px}
+      .price-table{width:100%;border-collapse:collapse;min-width:720px;color:#fff;font-size:.88rem}
+      .price-table th,.price-table td{padding:11px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid #45453E}
+      .price-table thead th{font-size:.82rem;color:#fff;background:transparent}
+      .price-table thead th small{display:block;margin-top:4px;color:rgba(255,255,255,.62);font-size:.7rem;line-height:1.35;font-weight:600;text-transform:none;letter-spacing:0}
+      .price-table tbody th{font-weight:800;color:#fff;white-space:nowrap}
+      .price-table tbody tr:last-child>*{border-bottom:0}
       .price-table .price-money{font-weight:800;white-space:nowrap}
-      .price-table-note{font-size:.88rem;color:var(--muted);margin:13px 0 0}
-      .price-loading{padding:20px;color:var(--muted)}
+      .price-extra-title{margin:16px 0 5px;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--yellow);font-weight:800}
+      .price-extra-grid{display:grid;grid-template-columns:minmax(160px,1.5fr) .7fr 1.3fr 1.5fr;border-top:1px solid #45453E}
+      .price-extra-grid>div{padding:9px 12px;border-bottom:1px solid #45453E;color:rgba(255,255,255,.75);font-size:.84rem}
+      .price-extra-grid .extra-head{color:rgba(255,255,255,.58);font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+      .price-extra-grid .extra-name,.price-extra-grid .extra-price{color:#fff;font-weight:800}
+      .price-loading{padding:18px 0;color:rgba(255,255,255,.65)}
 
-      /* Tickets as three clear steps. */
+      /* Tickets are three matching dark panels. */
       .ticket-steps{display:grid;gap:18px}
-      .ticket-step-panel{border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:clamp(20px,3vw,30px);background:rgba(255,255,255,.045)}
-      .ticket-step-panel.step-get-tickets{padding:0;background:transparent;border:0}
-      .ticket-step-head{margin-bottom:18px}
+      .ticket-step-panel,.ticket-step-panel.step-get-tickets{border:1px solid #45453E!important;border-radius:18px!important;padding:clamp(20px,3vw,30px)!important;background:#292925!important;color:#fff!important}
+      .ticket-step-head{margin-bottom:16px;padding-right:42px}
       .ticket-step-label{margin:0 0 4px;color:var(--yellow);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
-      .ticket-step-head h3{margin:0 0 6px;color:#fff;font-size:clamp(1.35rem,2.3vw,1.8rem)}
-      .ticket-step-head p{margin:0;color:rgba(255,255,255,.74);font-size:.96rem}
-      .step-get-tickets .ticket-step-head{padding:0 2px}
+      .ticket-step-head h3{margin:0 0 5px;color:#fff;font-size:clamp(1.3rem,2.2vw,1.72rem)}
+      .ticket-step-head p{margin:0;color:rgba(255,255,255,.7);font-size:.9rem;line-height:1.5}
+      .ticket-step-panel .ticket-box{margin:0!important;border-radius:13px!important;box-shadow:none!important}
 
-      /* Location/source notices should support the journey rather than dominate it. */
-      .ticket-step-panel .location-check-card{margin:0!important;padding:13px 15px!important;background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.15)!important;border-radius:12px!important;color:#fff!important}
+      /* Location/support notices are secondary information within Step 1. */
+      .ticket-step-panel .location-check-card{margin:0!important;padding:11px 38px 11px 13px!important;background:rgba(255,255,255,.025)!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:11px!important;color:#fff!important}
       .ticket-step-panel .location-check-card>span{display:none!important}
-      .ticket-step-panel .location-check-card strong{font-size:.92rem!important;color:#fff!important}
-      .ticket-step-panel .location-check-card p{margin:.2rem 0 0!important;color:rgba(255,255,255,.68)!important;font-size:.84rem!important}
-      .ticket-step-panel .source-support-card{margin:12px 0 0!important;padding:12px 14px!important;background:rgba(255,255,255,.035)!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:12px!important;color:#fff!important;box-shadow:none!important}
+      .ticket-step-panel .location-check-card strong{font-size:.88rem!important;color:#fff!important}
+      .ticket-step-panel .location-check-card p{margin:.16rem 0 0!important;color:rgba(255,255,255,.58)!important;font-size:.8rem!important}
+      .ticket-step-panel .source-support-card{margin:10px 0 0!important;padding:10px 38px 10px 13px!important;background:transparent!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:11px!important;color:#fff!important;box-shadow:none!important}
       .ticket-step-panel .source-support-card .support-mark{display:none!important}
-      .ticket-step-panel .source-support-card strong{font-size:.9rem!important;color:#fff!important}
-      .ticket-step-panel .source-support-card p{margin:.2rem 0 0!important;color:rgba(255,255,255,.62)!important;font-size:.82rem!important}
+      .ticket-step-panel .source-support-card strong{font-size:.84rem!important;color:rgba(255,255,255,.88)!important}
+      .ticket-step-panel .source-support-card p{margin:.15rem 0 0!important;color:rgba(255,255,255,.52)!important;font-size:.78rem!important}
 
-      /* Travel planning: three cards; no price labels; selection is only a subtle state. */
+      /* Travel planning is optional and never looks like a booking control. */
       #travel-choices.travel-strip{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0!important}
-      .travel-intro{margin:0 0 14px!important}
-      .travel-intro h3{display:none!important}
-      .travel-intro>p:not(.travel-planning-note){font-size:.92rem!important;margin:0 0 6px!important}
-      .travel-planning-note{margin:.35rem 0 0!important;color:rgba(255,255,255,.68)!important;font-size:.84rem!important}
-      .travel-choice{padding-right:18px!important}
-      .travel-choice::after{display:none!important}
-      .travel-choice-head>strong{display:none!important}
-      .travel-choice.is-travel-clickable{cursor:pointer}
-      .travel-choice.is-travel-clickable:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
-      .travel-choice-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
-      .travel-choice-action{appearance:none;border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;border-radius:999px;padding:.42rem .7rem;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
-      .travel-choice-action:hover,.travel-choice-action:focus-visible{border-color:var(--yellow);outline:none}
-      .travel-choice-action.is-selected{background:rgba(251,175,51,.16);border-color:var(--yellow);color:#fff}
-      .travel-choice-selection{display:inline-flex;margin-top:13px;border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:.42rem .7rem;color:#fff;font-size:.76rem;font-weight:800}
-      .travel-choice.has-travel-selection{border-color:rgba(251,175,51,.7);box-shadow:inset 0 0 0 1px rgba(251,175,51,.12)}
-      .travel-choice.has-travel-selection .travel-choice-selection{background:rgba(251,175,51,.16);border-color:var(--yellow);color:#fff}
+      .travel-intro{margin:0 0 12px!important}.travel-intro h3{display:none!important}
+      .travel-intro>p:not(.travel-planning-note){font-size:.88rem!important;margin:0 0 5px!important;color:rgba(255,255,255,.68)!important}
+      .travel-planning-note{margin:.25rem 0 0!important;color:rgba(255,255,255,.58)!important;font-size:.79rem!important;line-height:1.48}
+      .travel-choice{padding:17px 50px 17px 17px!important;background:#22221F!important;border-color:#45453E!important;color:#fff!important}
+      .travel-choice-head>strong{display:none!important}.travel-choice h3{color:#fff!important}.travel-choice p{color:rgba(255,255,255,.65)!important}
+      .travel-choice.is-travel-clickable{cursor:pointer}.travel-choice.is-travel-clickable:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+      .travel-choice-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+      .travel-choice-action,.travel-choice-selection{appearance:none;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:999px;padding:.4rem .67rem;font:inherit;font-size:.74rem;font-weight:800}
+      .travel-choice-action{cursor:pointer}.travel-choice-action:hover,.travel-choice-action:focus-visible{border-color:var(--yellow);outline:none}
+      .travel-choice-action.is-selected,.travel-choice.has-travel-selection .travel-choice-selection{background:rgba(251,175,51,.13);border-color:var(--yellow)}
+      .travel-choice.has-travel-selection{border-color:rgba(251,175,51,.55)!important}
 
-      /* Counter headers: descriptive title at left, useful status at right. */
-      #tito-mount .wfd-group-counter{align-items:baseline!important;gap:18px!important}
-      #tito-mount .wfd-group-counter strong{font-size:.98rem!important}
-      #tito-mount .wfd-group-counter span{font-size:.84rem!important;font-weight:700!important}
+      /* Selector presentation. */
+      #tito-mount .wfd-group-counter{align-items:baseline!important;gap:18px!important;background:#F6F0E2!important}
+      #tito-mount .wfd-group-counter strong{font-size:.98rem!important;color:#6D4A0B!important}
+      #tito-mount .wfd-group-counter span{font-size:.82rem!important;font-weight:800!important;text-align:right!important;color:#625846!important}
+      #tito-mount .wfd-group-counter.is-empty{background:#FFF3D7!important}
       #tito-mount .wfd-group-counter[data-wfd-group-kind="standalone"] span:empty{display:none}
-      #tito-mount .wfd-release-row[data-wfd-group-kind="admission"] .tito-release-description,
-      #tito-mount .wfd-release-row[data-wfd-group-kind="admission"] .tito-release--description,
-      #tito-mount .wfd-release-row[data-wfd-group-kind="admission"] [class*="release-description"]{display:none!important}
-      .wfd-blue-badge-note{margin:.35rem 0 0;color:var(--muted);font-size:.84rem}
+      #tito-mount .wfd-release-row{position:relative!important;min-height:58px!important;padding-right:142px!important}
+      #tito-mount .wfd-ticket-name{font-weight:800;color:var(--grey);font-size:.96rem;line-height:1.3;margin:0 0 3px;max-width:75%}
+      #tito-mount .wfd-quantity-wrap{position:absolute!important;right:20px!important;top:50%!important;transform:translateY(-50%)!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;text-align:right!important;white-space:nowrap!important}
+      #tito-mount .wfd-capacity-message{margin:12px 20px 0;padding:10px 12px;border-radius:10px;background:#FFF3D7;color:#5F4516;font-size:.84rem;line-height:1.42}
+      #tito-mount .wfd-capacity-message[hidden]{display:none!important}
+      .wfd-blue-badge-note{margin:.3rem 0 0;color:var(--muted);font-size:.82rem}
       .ticket-help{display:none!important}
-      .wfd-v23-tito-email{margin-top:.55rem;font-size:.92rem}
+      .wfd-v24-tito-email{margin-top:.55rem;font-size:.92rem}
 
-      @media (max-width:900px){#travel-choices.travel-strip{grid-template-columns:1fr}}
-      @media (max-width:650px){
-        .price-table{min-width:680px}
-        #tito-mount .wfd-group-counter{display:grid!important;gap:2px!important}
-        #tito-mount .wfd-group-counter span{text-align:left!important}
+      @media(max-width:900px){#travel-choices.travel-strip{grid-template-columns:1fr}.price-extra-grid{grid-template-columns:1.2fr .7fr 1fr 1.4fr}}
+      @media(max-width:650px){
+        .price-table{min-width:650px}.price-extra-grid{min-width:650px}
+        #tito-mount .wfd-group-counter{display:grid!important;gap:2px!important}#tito-mount .wfd-group-counter span{text-align:left!important}
+        #tito-mount .wfd-release-row{padding-right:12px!important;padding-bottom:46px!important}
+        #tito-mount .wfd-ticket-name{max-width:100%}
+        #tito-mount .wfd-quantity-wrap{top:auto!important;bottom:10px!important;right:12px!important;transform:none!important}
       }
     `;
     document.head.appendChild(style);
@@ -293,10 +299,8 @@ window.FIREWORKS_EVENT = {
   function ensurePageStructure() {
     if (pageStructureReady) return;
     const ticketSection = document.getElementById('tickets');
-    const whatsOn = document.getElementById('whats-on');
-    if (!ticketSection || !whatsOn) return;
+    if (!ticketSection) return;
 
-    // Navigation order: What's on, Prices, Tickets, Plan your visit, FAQ.
     const nav = document.querySelector('.nav');
     if (nav && !nav.querySelector('a[href="#prices"]')) {
       const ticketsLink = nav.querySelector('a[href="#tickets"]');
@@ -308,26 +312,22 @@ window.FIREWORKS_EVENT = {
 
     if (!document.getElementById('prices')) {
       const section = document.createElement('section');
-      section.className = 'section section-white prices-section';
+      section.className = 'section section-dark prices-section';
       section.id = 'prices';
       section.innerHTML = `
         <div class="wrap">
           <div class="section-heading prices-heading">
-            <p class="kicker kicker-dark">Prices</p>
+            <p class="kicker">Prices</p>
             <h2>Ticket prices</h2>
-            <p>All admission tickets are sold online. Discounted allocations move on automatically when they sell out or reach their closing date.</p>
+            <p>Compare the admission prices before you book.</p>
           </div>
-          <div id="wfd-price-table" class="price-table-wrap" aria-live="polite"><div class="price-loading">Loading current ticket prices…</div></div>
-          <p class="price-table-note">Prices and allocations are taken from the ticketing setup. A price band can finish earlier if its allocation sells out.</p>
+          <div id="wfd-price-table" class="price-matrix-card" aria-live="polite"><div class="price-loading">Loading current ticket prices…</div></div>
         </div>`;
       ticketSection.before(section);
     }
 
     const shell = ticketSection.querySelector('.booking-shell');
-    if (!shell || shell.dataset.wfdV23Structured === 'true') {
-      pageStructureReady = Boolean(shell);
-      return;
-    }
+    if (!shell || shell.dataset.wfdV24Structured === 'true') { pageStructureReady = Boolean(shell); return; }
 
     const heading = shell.querySelector('.ticket-heading');
     if (heading) {
@@ -358,71 +358,59 @@ window.FIREWORKS_EVENT = {
         <div class="ticket-step-content"></div>
       </section>
       <section class="ticket-step-panel step-get-tickets" data-ticket-step="3">
-        <div class="ticket-step-head"><p class="ticket-step-label">Step 3</p><h3>Get your tickets</h3><p>Choose the number of admission and parking tickets you need.</p></div>
+        <div class="ticket-step-head"><p class="ticket-step-label">Step 3</p><h3>Get your tickets</h3><p>Choose the admission and parking tickets you need.</p></div>
         <div class="ticket-step-content"></div>
       </section>`;
 
-    const step1 = steps.querySelector('[data-ticket-step="1"] .ticket-step-content');
-    const step2 = steps.querySelector('[data-ticket-step="2"] .ticket-step-content');
-    const step3 = steps.querySelector('[data-ticket-step="3"] .ticket-step-content');
-    step1.appendChild(location);
-    if (support) step1.appendChild(support);
-    step2.appendChild(travelIntro);
-    step2.appendChild(travelChoices);
-    step3.appendChild(ticketBox);
+    steps.querySelector('[data-ticket-step="1"] .ticket-step-content').appendChild(location);
+    if (support) steps.querySelector('[data-ticket-step="1"] .ticket-step-content').appendChild(support);
+    steps.querySelector('[data-ticket-step="2"] .ticket-step-content').append(travelIntro, travelChoices);
+    steps.querySelector('[data-ticket-step="3"] .ticket-step-content').appendChild(ticketBox);
     shell.appendChild(steps);
-    shell.dataset.wfdV23Structured = 'true';
+    shell.dataset.wfdV24Structured = 'true';
     pageStructureReady = true;
   }
+
+  function readTravel() {
+    if (travelValue) return travelValue;
+    try { travelValue = String(localStorage.getItem(TRAVEL_KEY) || ''); } catch { travelValue = ''; }
+    return travelValue;
+  }
+
+  function saveTravel(value) {
+    travelValue = String(value || '');
+    try { localStorage.setItem(TRAVEL_KEY, travelValue); } catch { /* optional */ }
+    updateTravelControls();
+  }
+
+  function preferenceOptions(item) { return Array.isArray(item?.preferenceOptions) ? item.preferenceOptions : []; }
 
   function ensureTravelPlanningNote() {
     const intro = document.querySelector('.travel-intro');
     if (!intro) return;
     let note = intro.querySelector('.travel-planning-note');
-    if (!note) {
-      note = document.createElement('p');
-      note.className = 'travel-planning-note';
-      intro.appendChild(note);
-    }
-    note.innerHTML = '<strong>This is just to help us plan likely demand.</strong> You are not committing to a travel method, and you do not need to tell us if your plans change later. Parking is only reserved by selecting a parking ticket in Step 3.';
+    if (!note) { note = document.createElement('p'); note.className = 'travel-planning-note'; intro.appendChild(note); }
+    note.innerHTML = '<strong>This only helps us plan likely demand.</strong> It does not commit you to a travel method and you do not need to tell us if your plans change. Parking is only reserved by choosing a parking ticket in Step 3.';
   }
 
   function enhanceTravelCards() {
     const root = document.getElementById('travel-choices');
     const items = window.FIREWORKS_EVENT?.travel || [];
     if (!root || !items.length) return;
-
     [...root.querySelectorAll('.travel-choice')].forEach((card, index) => {
       const item = items[index];
-      if (!item) return;
       const options = preferenceOptions(item);
-      if (!options.length || card.dataset.wfdTravelEnhanced === 'true') return;
-
+      if (!item || !options.length || card.dataset.wfdTravelEnhanced === 'true') return;
       if (options.length === 1) {
         const option = options[0];
         card.classList.add('is-travel-clickable');
         card.dataset.travelSingleValue = option.value;
-        card.setAttribute('role', 'button');
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('aria-label', `${item.title}: ${option.label}`);
-        const status = document.createElement('span');
-        status.className = 'travel-choice-selection';
-        status.dataset.travelSingleStatus = 'true';
-        status.textContent = option.label;
-        card.appendChild(status);
+        card.setAttribute('role', 'button'); card.setAttribute('tabindex', '0'); card.setAttribute('aria-label', `${item.title}: ${option.label}`);
+        const status = document.createElement('span'); status.className = 'travel-choice-selection'; status.textContent = option.label; card.appendChild(status);
       } else {
-        card.setAttribute('role', 'group');
-        card.setAttribute('aria-label', `Likely travel: ${item.title}`);
-        const actions = document.createElement('div');
-        actions.className = 'travel-choice-actions';
-        options.forEach((option) => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'travel-choice-action';
-          button.dataset.travelValue = option.value;
-          button.textContent = option.label;
-          actions.appendChild(button);
-        });
+        card.setAttribute('role', 'group'); card.setAttribute('aria-label', item.title);
+        const actions = document.createElement('div'); actions.className = 'travel-choice-actions';
+        options.forEach((option) => { const b = document.createElement('button'); b.type='button'; b.className='travel-choice-action'; b.dataset.travelValue=option.value; b.textContent=option.label; actions.appendChild(b); });
         card.appendChild(actions);
       }
       card.dataset.wfdTravelEnhanced = 'true';
@@ -430,17 +418,13 @@ window.FIREWORKS_EVENT = {
     updateTravelControls();
   }
 
-  function installDelegatedTravelEvents() {
-    if (delegatedTravelEventsInstalled) return;
-    delegatedTravelEventsInstalled = true;
+  function installTravelEvents() {
+    if (travelEventsInstalled) return; travelEventsInstalled = true;
     document.addEventListener('click', (event) => {
       const action = event.target?.closest?.('[data-travel-value]');
-      if (action && document.getElementById('travel-choices')?.contains(action)) {
-        event.preventDefault(); saveTravel(action.dataset.travelValue); return;
-      }
+      if (action && document.getElementById('travel-choices')?.contains(action)) { event.preventDefault(); saveTravel(action.dataset.travelValue); return; }
       const card = event.target?.closest?.('.travel-choice[data-travel-single-value]');
-      if (!card || !document.getElementById('travel-choices')?.contains(card)) return;
-      if (event.target?.closest?.('a,button,input,select,textarea')) return;
+      if (!card || !document.getElementById('travel-choices')?.contains(card) || event.target?.closest?.('a,button,input,select,textarea')) return;
       saveTravel(card.dataset.travelSingleValue);
     });
     document.addEventListener('keydown', (event) => {
@@ -454,503 +438,273 @@ window.FIREWORKS_EVENT = {
   function updateTravelControls() {
     const selected = readTravel();
     document.querySelectorAll('[data-travel-value]').forEach((button) => {
-      const active = button.dataset.travelValue === selected;
-      button.classList.toggle('is-selected', active);
-      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      const active = button.dataset.travelValue === selected; button.classList.toggle('is-selected', active); button.setAttribute('aria-pressed', active ? 'true':'false');
     });
     document.querySelectorAll('.travel-choice').forEach((card) => {
       const singleValue = card.dataset.travelSingleValue || '';
       const active = Boolean(singleValue && singleValue === selected) || Boolean(card.querySelector('.travel-choice-action.is-selected'));
-      card.classList.toggle('has-travel-selection', active);
-      if (singleValue) card.setAttribute('aria-pressed', active ? 'true' : 'false');
-      // Deliberately do not change the text when selected. The choices remain
-      // Walking / Bus from Wotton / Bus from Charfield / Driving.
+      card.classList.toggle('has-travel-selection', active); if (singleValue) card.setAttribute('aria-pressed', active ? 'true':'false');
     });
   }
 
-  function allAvailabilityGroups() {
-    return [...(latestAvailability?.waves || []), ...(latestAvailability?.parkingGroups || [])];
-  }
-
-  function groupFromAvailability(key) {
-    return allAvailabilityGroups().find((group) => String(group?.key || '') === String(key)) || null;
-  }
-
-  function waveIndex(key) {
-    return (latestAvailability?.waves || []).findIndex((wave) => String(wave?.key || '') === String(key));
-  }
-
-  function groupRows(key) {
-    const escaped = CSS.escape(String(key));
-    return [...document.querySelectorAll(`.wfd-release-row[data-wfd-group="${escaped}"]`)];
-  }
-
-  function numericControlValue(control) {
-    const value = Number(control?.value);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
-  }
-
-  function selectedForGroup(key) {
-    return groupRows(key).reduce((total, row) => {
-      const control = row.querySelector('input[type="number"], select');
-      return total + numericControlValue(control);
-    }, 0);
-  }
-
-  function selectedForReleaseRow(row) {
-    return numericControlValue(row?.querySelector('input[type="number"], select'));
-  }
-
+  function allGroups() { return [...(latestAvailability?.waves || []), ...(latestAvailability?.parkingGroups || [])]; }
+  function groupByKey(key) { return allGroups().find((g) => String(g?.key || '') === String(key)) || null; }
+  function waveIndex(key) { return (latestAvailability?.waves || []).findIndex((g) => String(g?.key || '') === String(key)); }
+  function groupRows(key) { return [...document.querySelectorAll(`.wfd-release-row[data-wfd-group="${CSS.escape(String(key))}"]`)]; }
+  function numericValue(control) { const n=Number(control?.value); return Number.isFinite(n)&&n>0?Math.floor(n):0; }
+  function selectedForGroup(key) { return groupRows(key).reduce((sum,row)=>sum+numericValue(row.querySelector('input[type="number"],select')),0); }
   function remoteRemaining(group) {
     if (!group || group.remainingKnown === false) return null;
-    const value = Number(group.displayRemaining == null ? group.remaining : group.displayRemaining);
-    return Number.isFinite(value) ? Math.max(value, 0) : null;
+    const n=Number(group.displayRemaining == null ? group.remaining : group.displayRemaining);
+    return Number.isFinite(n)?Math.max(0,n):null;
+  }
+  function localRemaining(group) { const r=remoteRemaining(group); return r==null?null:Math.max(0,r-selectedForGroup(group.key)); }
+
+  function cleanTicketTitle(title, band='') {
+    let value=String(title||'Ticket');
+    if (band) value=value.replace(new RegExp(`\\b${String(band).replace(/[- ]/g,'[- ]?')}\\b`,'ig'),'');
+    value=value.replace(/\b(super[- ]?saver|advance(?:d)?|standard)\b/ig,'').replace(/\s*[|:–—-]\s*/g,' ').replace(/\s+/g,' ').trim();
+    return value || String(title||'Ticket');
+  }
+  function familyKey(title, band='') { return cleanTicketTitle(title,band).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+  function releaseForRow(row) {
+    const group=groupByKey(row?.dataset?.wfdGroup); if(!group) return null;
+    return (group.releaseDetails||[]).find((r)=>String(r.slug)===String(row.dataset.wfdRelease))||null;
   }
 
-  function remainingForDisplay(group, selected = 0) {
-    const remote = remoteRemaining(group);
-    return remote == null ? null : Math.max(remote - selected, 0);
+  function patchCounter(key,title,status='',opts={}) {
+    const counter=document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${CSS.escape(String(key))}"]`); if(!counter)return null;
+    const html=`<strong>${escapeHtml(title)}</strong><span>${escapeHtml(status)}</span>`; if(counter.innerHTML!==html)counter.innerHTML=html;
+    counter.classList.toggle('is-empty',Boolean(opts.empty)); return counter;
   }
 
-  function patchCounter(key, title, status = '', { empty = false, over = false } = {}) {
-    const counter = document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${CSS.escape(String(key))}"]`);
-    if (!counter) return null;
-    const html = `<strong>${title}</strong>${status ? `<span>${status}</span>` : '<span></span>'}`;
-    if (counter.innerHTML !== html) counter.innerHTML = html;
-    counter.classList.toggle('is-empty', Boolean(empty));
-    counter.classList.toggle('is-over', Boolean(over));
-    return counter;
-  }
-
-  function parkingProjected() {
-    const meta = latestAvailability?.parking;
-    if (!meta) return null;
-    const selectedGeneral = selectedForGroup('general-parking');
-    const selectedBlue = selectedForGroup('blue-badge-parking');
-    const generalCapacity = Number(meta.generalCapacity ?? 120);
-    const reserve = Number(meta.blueBadgeReserve ?? 30);
-    const generalBooked = Number(meta.generalBooked ?? 0);
-    const blueBooked = Number(meta.blueBadgeBooked ?? 0);
-    const totalCapacity = Number(meta.capacity ?? 150);
-    const totalBooked = Number(meta.totalBooked ?? (generalBooked + blueBooked));
-    const projectedBlue = blueBooked + selectedBlue;
-    const effectiveGeneralCapacity = Math.max(0, generalCapacity - Math.max(0, projectedBlue - reserve));
-    const totalRemaining = Math.max(0, totalCapacity - totalBooked - selectedGeneral - selectedBlue);
-    const generalRemaining = Math.max(0, Math.min(effectiveGeneralCapacity - generalBooked - selectedGeneral, totalRemaining));
-    return { generalRemaining, totalRemaining };
-  }
-
-  function renderKnownCounter(group) {
-    if (!group?.key) return;
-    const key = String(group.key);
-    const selected = selectedForGroup(key);
-    const remaining = remainingForDisplay(group, selected);
-    const mode = String(group.counterMode || 'capacity');
-
-    if (mode === 'ticket-reminder') {
-      patchCounter(key, 'Everyone attending needs a ticket', '', { empty: Boolean(group.soldOut) });
-      return;
+  function renderCounter(group) {
+    if(!group?.key)return;
+    if(group.counterMode==='ticket-reminder'){ patchCounter(group.key,'Everyone attending needs a ticket','',{empty:Boolean(group.soldOut)}); return; }
+    const remaining=localRemaining(group);
+    if(group.counterMode==='parking-shared'){
+      patchCounter(group.key,'Parking',(group.soldOut||remaining===0)?'Sold Out':(remaining==null?'Available':`${remaining} ${remaining===1?'space':'spaces'} available`),{empty:Boolean(group.soldOut||remaining===0)}); return;
     }
-
-    if (mode === 'parking-general') {
-      const projected = parkingProjected();
-      const value = projected ? projected.generalRemaining : remaining;
-      if (group.soldOut || value === 0) {
-        patchCounter(key, 'Parking', 'Sold Out', { empty: true });
-      } else if (value != null) {
-        patchCounter(key, 'Parking', `${value} ${value === 1 ? 'space' : 'spaces'} available`);
-      } else {
-        patchCounter(key, 'Parking', 'Pre-booking required');
-      }
-      return;
-    }
-
-    if (mode === 'parking-accessible') {
-      const projected = parkingProjected();
-      const value = projected ? projected.totalRemaining : remaining;
-      patchCounter(key, 'Blue Badge parking', (group.soldOut || value === 0) ? 'Sold Out' : 'Available', { empty: Boolean(group.soldOut || value === 0) });
-      return;
-    }
-
-    const deadline = DEADLINES[key] || '';
-    const title = `${group.label || 'Tickets'} Tickets`;
-    const remotelySoldOut = Boolean(group.soldOut || group.expired || remoteRemaining(group) === 0);
-    if (remotelySoldOut) {
-      patchCounter(key, title, 'Sold Out', { empty: true });
-    } else if (remaining != null) {
-      patchCounter(key, title, `${remaining} available${deadline ? ` until ${deadline}` : ''}`);
-    } else {
-      patchCounter(key, title, deadline ? `Available until ${deadline}` : 'Available');
-    }
+    const meta=BAND_META[group.key]||{label:group.label||'Tickets',deadline:''};
+    const title=`${meta.label} Tickets`;
+    if(group.soldOut || group.expired || remoteRemaining(group)===0) patchCounter(group.key,title,group.expired?'Closed':'Sold Out',{empty:true});
+    else patchCounter(group.key,title,remaining==null?`Available until ${meta.deadline}`:`${remaining} available until ${meta.deadline}`);
   }
 
-  function reorderPreschool() {
-    const mount = document.getElementById('tito-mount');
-    if (!mount) return;
-    const counter = mount.querySelector('.wfd-group-counter[data-wfd-group-counter="preschool"]');
-    const rows = [...mount.querySelectorAll('.wfd-release-row[data-wfd-group="preschool"]')];
-    const firstAdmission = mount.querySelector('.wfd-group-counter[data-wfd-group-kind="admission"], .wfd-group-counter[data-wfd-group-counter="super-saver"], .wfd-group-counter[data-wfd-group-counter="advance"], .wfd-group-counter[data-wfd-group-counter="standard"]');
-    if (!counter || !rows.length || !firstAdmission) return;
-    counter.dataset.wfdGroupKind = 'standalone';
-    rows.forEach((row) => { row.dataset.wfdGroupKind = 'standalone'; });
-    const counterBefore = Boolean(counter.compareDocumentPosition(firstAdmission) & Node.DOCUMENT_POSITION_FOLLOWING);
-    if (!counterBefore) firstAdmission.before(counter, ...rows);
-  }
-
-  function setGroupVisible(key, visible, { counterOnly = false } = {}) {
-    const escaped = CSS.escape(String(key));
-    document.querySelectorAll(`[data-wfd-group-counter="${escaped}"]`).forEach((node) => { node.hidden = !visible; });
-    document.querySelectorAll(`[data-wfd-group="${escaped}"]`).forEach((node) => { node.hidden = !visible || counterOnly; });
+  function setGroupVisible(key,visible,{counterOnly=false}={}) {
+    const esc=CSS.escape(String(key));
+    document.querySelectorAll(`[data-wfd-group-counter="${esc}"]`).forEach((n)=>{n.hidden=!visible;});
+    document.querySelectorAll(`[data-wfd-group="${esc}"]`).forEach((n)=>{n.hidden=!visible||counterOnly;});
   }
 
   function enforceWaveVisibility() {
-    const waves = latestAvailability?.waves || [];
-    if (!waves.length) return;
-    let currentIndex = waveIndex(latestAvailability?.currentWave?.key || '');
-    if (currentIndex < 0) currentIndex = waves.findIndex((wave) => !wave?.soldOut && !wave?.expired && (remoteRemaining(wave) == null || remoteRemaining(wave) > 0));
-    if (currentIndex < 0) {
-      waves.forEach((wave) => setGroupVisible(wave.key, false));
-      return;
-    }
-
-    let revealNext = true;
-    waves.forEach((wave, index) => {
-      if (index < currentIndex) {
-        setGroupVisible(wave.key, false);
-        return;
-      }
-      if (index === currentIndex) {
-        setGroupVisible(wave.key, true);
-        revealNext = remainingForDisplay(wave, selectedForGroup(wave.key)) === 0;
-        return;
-      }
-      const selected = selectedForGroup(wave.key);
-      const show = selected > 0 || revealNext;
-      setGroupVisible(wave.key, show);
-      revealNext = show && remainingForDisplay(wave, selected) === 0;
+    const waves=latestAvailability?.waves||[]; if(!waves.length)return;
+    let current=waveIndex(latestAvailability?.currentWave?.key||'');
+    if(current<0) current=waves.findIndex((w)=>!w.soldOut&&!w.expired&&(remoteRemaining(w)==null||remoteRemaining(w)>0));
+    if(current<0){waves.forEach((w)=>setGroupVisible(w.key,true,{counterOnly:true}));return;}
+    let reveal=false;
+    waves.forEach((wave,index)=>{
+      if(index<current){setGroupVisible(wave.key,true,{counterOnly:true});return;}
+      const selected=selectedForGroup(wave.key);
+      if(index===current){setGroupVisible(wave.key,true);reveal=localRemaining(wave)===0;return;}
+      const show=selected>0||reveal; setGroupVisible(wave.key,show,{counterOnly:false}); reveal=show&&localRemaining(wave)===0;
     });
   }
 
-  function ensureBlueBadgeDescription() {
-    groupRows('blue-badge-parking').forEach((row) => {
-      const text = String(row.textContent || '');
-      if (/valid blue badge must be displayed/i.test(text)) return;
-      const note = document.createElement('p');
-      note.className = 'wfd-blue-badge-note';
-      note.textContent = 'A valid Blue Badge must be displayed in the vehicle.';
-      row.appendChild(note);
+  function reorderPreschool() {
+    const mount=document.getElementById('tito-mount'); if(!mount)return;
+    const counter=mount.querySelector('.wfd-group-counter[data-wfd-group-counter="preschool"]');
+    const rows=[...mount.querySelectorAll('.wfd-release-row[data-wfd-group="preschool"]')];
+    const firstAdmission=mount.querySelector('.wfd-group-counter[data-wfd-group-kind="admission"]');
+    if(!counter||!rows.length||!firstAdmission)return;
+    counter.dataset.wfdGroupKind='standalone'; rows.forEach((r)=>{r.dataset.wfdGroupKind='standalone';});
+    if(!(counter.compareDocumentPosition(firstAdmission)&Node.DOCUMENT_POSITION_FOLLOWING)) firstAdmission.before(counter,...rows);
+  }
+
+  function visibleNameAlreadyPresent(row, fullTitle, cleanTitle) {
+    const wanted=[String(fullTitle||'').trim().toLowerCase(),String(cleanTitle||'').trim().toLowerCase()].filter(Boolean);
+    return [...row.querySelectorAll('*')].some((el)=>{
+      if(el.classList.contains('wfd-ticket-name')) return false;
+      const text=String(el.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+      if(!text || !wanted.some((w)=>text===w || text.startsWith(`${w} `))) return false;
+      const style=window.getComputedStyle(el);
+      return style.display!=='none' && style.visibility!=='hidden' && Number(style.opacity||1)!==0;
+    });
+  }
+
+  function ensureTicketNames() {
+    allGroups().forEach((group)=>{
+      (group.releaseDetails||[]).forEach((release)=>{
+        const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(release.slug))}"]`); if(!row)return;
+        const title=cleanTicketTitle(release.title,group.label);
+        let name=row.querySelector('.wfd-ticket-name');
+        if(visibleNameAlreadyPresent(row,release.title,title)) { name?.remove(); return; }
+        if(!name){name=document.createElement('div');name.className='wfd-ticket-name';row.prepend(name);}
+        if(name.textContent!==title)name.textContent=title;
+      });
+    });
+  }
+
+  function alignQuantityControls() {
+    document.querySelectorAll('#tito-mount .wfd-release-row').forEach((row)=>{
+      const control=row.querySelector('input[type="number"],select'); if(!control)return;
+      let best=control.closest('[class*="quantity"]');
+      if(best===row) best=null;
+      if(!best){
+        let node=control.parentElement;
+        while(node&&node!==row){
+          const controls=node.querySelectorAll('input[type="number"],select').length;
+          const buttons=node.querySelectorAll('button,a,[role="button"]').length;
+          if(controls===1 && buttons>=1){best=node;break;}
+          node=node.parentElement;
+        }
+      }
+      (best||control.parentElement)?.classList.add('wfd-quantity-wrap');
+    });
+  }
+
+  function ensureBlueBadgeNote() {
+    const parking=groupByKey('parking'); if(!parking)return;
+    (parking.releaseDetails||[]).forEach((release)=>{
+      if(!/blue\s*badge|accessible\s*parking|disabled\s*parking/i.test(`${release.title||''} ${release.slug||''}`))return;
+      const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(release.slug))}"]`); if(!row||/valid blue badge must be displayed/i.test(String(row.textContent||'')))return;
+      const note=document.createElement('p'); note.className='wfd-blue-badge-note'; note.textContent='A valid Blue Badge must be displayed in the vehicle.'; row.appendChild(note);
     });
   }
 
   function money(release) {
-    const type = String(release?.pricingType || '').toLowerCase();
-    const value = Number(release?.displayPrice ?? release?.price);
-    if (type === 'free' || (Number.isFinite(value) && value === 0)) return 'Free';
-    if (!Number.isFinite(value)) return 'See ticket selector';
-    return `£${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2)}`;
-  }
-
-  function cleanTicketTitle(title, band = '') {
-    let value = String(title || 'Ticket');
-    if (band) value = value.replace(new RegExp(`\\b${band.replace(/[- ]/g, '[- ]?')}\\b`, 'ig'), '');
-    value = value.replace(/\b(super[- ]?saver|advance(?:d)?|standard)\b/ig, '').replace(/[|:–—-]+/g, ' ').replace(/\s+/g, ' ').trim();
-    return value || String(title || 'Ticket');
-  }
-
-  function allocationText(group) {
-    if (!group) return '';
-    if (group.key === 'super-saver') return `${Number(group.capacity || 300)} paid tickets shared across Super Saver`;
-    if (group.key === 'advance') return `${Number(group.capacity || 700)} paid tickets shared across Advance`;
-    if (group.key === 'standard') return 'Remaining event capacity';
-    if (group.key === 'preschool') return 'Included in event capacity';
-    if (group.key === 'general-parking') return '120 general spaces; Blue Badge use above 30 reduces this';
-    if (group.key === 'blue-badge-parking') return '30 spaces protected; additional spaces use spare parking capacity';
-    return '';
-  }
-
-  function deadlineText(group) {
-    if (!group) return '';
-    if (DEADLINES[group.key]) return DEADLINES[group.key];
-    if (group.key === 'preschool') return '7.30pm Saturday 7th November';
-    if (group.kind === 'parking') return 'Until sold out or 7.30pm Saturday 7th November';
-    return '';
+    const type=String(release?.pricingType||'').toLowerCase(); const n=Number(release?.displayPrice??release?.price);
+    if(type==='free'||(Number.isFinite(n)&&n===0))return'Free'; if(!Number.isFinite(n))return'—'; return`£${Number.isInteger(n)?n.toFixed(0):n.toFixed(2)}`;
   }
 
   function renderPriceTable() {
-    const root = document.getElementById('wfd-price-table');
-    if (!root || !latestAvailability?.ok) return;
-    const groups = [
-      ...(latestAvailability.parkingGroups || []).filter((g) => g.key === 'preschool'),
-      ...(latestAvailability.waves || []),
-      ...(latestAvailability.parkingGroups || []).filter((g) => g.key !== 'preschool')
-    ];
-    const rows = [];
-    groups.forEach((group) => {
-      const details = Array.isArray(group.releaseDetails) ? group.releaseDetails : [];
-      details.forEach((release) => {
-        const bandLabel = group.key === 'preschool' ? 'Admission' : (group.kind === 'parking' ? 'Parking' : `${group.label} Tickets`);
-        const ticket = cleanTicketTitle(release.title, group.label);
-        rows.push(`<tr><td><span class="price-band">${escapeHtml(bandLabel)}</span><br>${escapeHtml(ticket)}</td><td class="price-money">${escapeHtml(money(release))}</td><td>${escapeHtml(allocationText(group))}</td><td>${escapeHtml(deadlineText(group))}</td></tr>`);
-      });
-    });
-    if (!rows.length) return;
-    const html = `<table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Price</th><th scope="col">Allocation</th><th scope="col">Available until</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
-    if (root.innerHTML !== html) root.innerHTML = html;
+    const root=document.getElementById('wfd-price-table'); if(!root||!latestAvailability?.ok)return;
+    const waves=latestAvailability.waves||[];
+    const byBand=Object.fromEntries(waves.map((w)=>[w.key,w]));
+    const families=new Map();
+    waves.forEach((wave)=>{(wave.releaseDetails||[]).forEach((release)=>{
+      const key=familyKey(release.title,wave.label); if(!key)return;
+      if(!families.has(key)) families.set(key,{name:cleanTicketTitle(release.title,wave.label),position:Number.isFinite(Number(release.position))?Number(release.position):99999,prices:{}});
+      const item=families.get(key); item.position=Math.min(item.position,Number.isFinite(Number(release.position))?Number(release.position):99999); item.prices[wave.key]=money(release);
+    });});
+    const familyRows=[...families.values()].sort((a,b)=>a.position-b.position||a.name.localeCompare(b.name)).map((item)=>`<tr><th scope="row">${escapeHtml(item.name)}</th><td class="price-money">${escapeHtml(item.prices['super-saver']||'—')}</td><td class="price-money">${escapeHtml(item.prices.advance||'—')}</td><td class="price-money">${escapeHtml(item.prices.standard||'—')}</td></tr>`).join('');
+    const preschool=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='preschool');
+    const parking=(latestAvailability.parkingGroups||[]).find((g)=>g.key==='parking');
+    const extra=[];
+    (preschool?.releaseDetails||[]).forEach((r)=>extra.push([cleanTicketTitle(r.title,preschool.label),money(r),'No separate allocation','Until 7.30pm Saturday 7th November']));
+    (parking?.releaseDetails||[]).forEach((r)=>extra.push([cleanTicketTitle(r.title,parking.label),money(r),'150 spaces shared across all parking','Until sold out or 7.30pm Saturday 7th November']));
+    const extras=extra.map(([n,p,q,d])=>`<div class="extra-name">${escapeHtml(n)}</div><div class="extra-price">${escapeHtml(p)}</div><div>${escapeHtml(q)}</div><div>${escapeHtml(d)}</div>`).join('');
+    const html=`<div class="price-table-wrap"><table class="price-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Super Saver<small>300 tickets<br>until 5pm Monday 5th October</small></th><th scope="col">Advance<small>700 tickets<br>until 5pm Monday 26th October</small></th><th scope="col">Standard<small>2,500 tickets<br>until 7.30pm Saturday 7th November</small></th></tr></thead><tbody>${familyRows}</tbody></table></div>${extras?`<div class="price-extra-title">Other tickets</div><div class="price-extra-grid"><div class="extra-head">Ticket</div><div class="extra-head">Price</div><div class="extra-head">Allocation</div><div class="extra-head">Available until</div>${extras}</div>`:''}`;
+    if(root.innerHTML!==html)root.innerHTML=html;
   }
 
-  function releaseIndex(group, slug) {
-    return (group?.releaseDetails || []).findIndex((release) => String(release?.slug || '') === String(slug || ''));
+  function nextWaveFor(key){const w=latestAvailability?.waves||[];const i=waveIndex(key);return i>=0?w[i+1]||null:null;}
+  function releaseMatchInNext(sourceRow,next){
+    const current=groupByKey(sourceRow.dataset.wfdGroup); const source=releaseForRow(sourceRow); if(!current||!source||!next)return null;
+    const key=familyKey(source.title,current.label); return (next.releaseDetails||[]).find((r)=>familyKey(r.title,next.label)===key)||null;
+  }
+  function setControl(control,value){
+    const next=Math.max(0,Math.floor(Number(value)||0)); if(!control)return;
+    if(control.tagName==='SELECT'){const nums=[...control.options].map((o)=>Number(o.value)).filter(Number.isFinite).sort((a,b)=>a-b);const allowed=nums.filter((n)=>n<=next).pop();control.value=String(allowed??nums[0]??0);} else control.value=String(next);
   }
 
-  function nextWaveFor(key) {
-    const waves = latestAvailability?.waves || [];
-    const index = waveIndex(key);
-    return index >= 0 ? (waves[index + 1] || null) : null;
+  function statusMessage(text) {
+    const mount=document.getElementById('tito-mount'); if(!mount)return;
+    let el=mount.querySelector('.wfd-capacity-message'); if(!el){el=document.createElement('div');el.className='wfd-capacity-message';el.setAttribute('role','status');el.setAttribute('aria-live','polite');mount.appendChild(el);}
+    el.textContent=text; el.hidden=!text;
+    if(messageTimer)window.clearTimeout(messageTimer); if(text)messageTimer=window.setTimeout(()=>{el.hidden=true;},6500);
   }
 
-  function setControlQuantity(control, nextValue) {
-    const value = Math.max(0, Math.floor(Number(nextValue) || 0));
-    if (control?.tagName === 'SELECT') {
-      const numeric = [...control.options].map((option) => Number(option.value)).filter(Number.isFinite).sort((a,b) => a-b);
-      const allowed = numeric.filter((n) => n <= value).pop();
-      control.value = String(allowed ?? numeric[0] ?? 0);
-    } else if (control) {
-      control.value = String(value);
-    }
+  function spillToNext(sourceRow,quantity,attempt=0) {
+    if(!sourceRow||quantity<=0)return false;
+    const current=groupByKey(sourceRow.dataset.wfdGroup); const next=nextWaveFor(sourceRow.dataset.wfdGroup); const source=releaseForRow(sourceRow);
+    if(!current||!source)return false;
+    if(!next){statusMessage(`${cleanTicketTitle(source.title,current.label)} is at the maximum available in Standard.`);return false;}
+    const targetRelease=releaseMatchInNext(sourceRow,next);
+    if(!targetRelease){statusMessage(`Please check ${cleanTicketTitle(source.title,current.label)}: it could not be moved automatically to ${next.label}.`);return false;}
+    setGroupVisible(next.key,true);
+    const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(targetRelease.slug))}"]`); const control=row?.querySelector('input[type="number"],select');
+    if(!control){if(attempt<8)window.setTimeout(()=>spillToNext(sourceRow,quantity,attempt+1),50);return false;}
+    setControl(control,numericValue(control)+quantity);
+    control.dispatchEvent(new Event('input',{bubbles:true})); control.dispatchEvent(new Event('change',{bubbles:true}));
+    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`);
+    schedulePatch(); return true;
   }
 
-  function revealGroupNow(key) {
-    setGroupVisible(key, true);
+  function incrementIntent(button){const t=String([button?.textContent,button?.getAttribute?.('aria-label'),button?.getAttribute?.('title'),button?.className].filter(Boolean).join(' ')).toLowerCase();return t.trim()==='+'||/(^|\s)(add|plus|increase|increment)(\s|$)/.test(t);}
+
+  function clampAdmissionControl(control,row) {
+    const group=groupByKey(row.dataset.wfdGroup); const remaining=remoteRemaining(group); if(remaining==null)return;
+    const total=selectedForGroup(group.key); const excess=Math.max(0,total-remaining); if(!excess)return;
+    const current=numericValue(control); const moved=Math.min(excess,current); setControl(control,Math.max(0,current-moved));
+    if(moved>0) window.setTimeout(()=>spillToNext(row,moved),0);
   }
 
-  function spillToNextWave(sourceRow, quantity, attempt = 0) {
-    if (!sourceRow || quantity <= 0 || !latestAvailability?.waves) return;
-    const key = String(sourceRow.dataset.wfdGroup || '');
-    const current = groupFromAvailability(key);
-    const next = nextWaveFor(key);
-    if (!current || !next) return;
-    const index = releaseIndex(current, sourceRow.dataset.wfdRelease);
-    const targetRelease = index >= 0 ? next.releaseDetails?.[index] : null;
-    if (!targetRelease?.slug) return;
-
-    revealGroupNow(next.key);
-    const targetRow = document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(targetRelease.slug))}"]`);
-    const control = targetRow?.querySelector('input[type="number"], select');
-    if (!control) {
-      if (attempt < 6) window.setTimeout(() => spillToNextWave(sourceRow, quantity, attempt + 1), 50);
-      return;
-    }
-    setControlQuantity(control, numericControlValue(control) + quantity);
-    control.dispatchEvent(new Event('input', { bubbles: true }));
-    control.dispatchEvent(new Event('change', { bubbles: true }));
-    schedulePatch();
-  }
-
-  function buttonIntent(button) {
-    const text = String([button?.textContent, button?.getAttribute?.('aria-label'), button?.getAttribute?.('title'), button?.className].filter(Boolean).join(' ')).toLowerCase();
-    return text.trim() === '+' || /(^|\s)(add|plus|increase|increment)(\s|$)/.test(text) ? 'increment' : null;
-  }
-
-  function enforceParkingSelection(control, row) {
-    const meta = latestAvailability?.parking;
-    if (!meta || !control || !row) return;
-    const key = String(row.dataset.wfdGroup || '');
-    if (key !== 'general-parking' && key !== 'blue-badge-parking') return;
-
-    const selectedGeneral = selectedForGroup('general-parking');
-    const selectedBlue = selectedForGroup('blue-badge-parking');
-    const generalCapacity = Number(meta.generalCapacity ?? 120);
-    const reserve = Number(meta.blueBadgeReserve ?? 30);
-    const generalBooked = Number(meta.generalBooked ?? 0);
-    const blueBooked = Number(meta.blueBadgeBooked ?? 0);
-    const totalCapacity = Number(meta.capacity ?? 150);
-    const totalBooked = Number(meta.totalBooked ?? (generalBooked + blueBooked));
-
-    if (key === 'general-parking') {
-      const effectiveGeneral = Math.max(0, generalCapacity - Math.max(0, blueBooked + selectedBlue - reserve));
-      const maxSelected = Math.max(0, Math.min(effectiveGeneral - generalBooked, totalCapacity - totalBooked - selectedBlue));
-      if (selectedGeneral > maxSelected) {
-        const current = numericControlValue(control);
-        setControlQuantity(control, Math.max(0, current - (selectedGeneral - maxSelected)));
-      }
-    } else {
-      const maxSelected = Math.max(0, totalCapacity - totalBooked - selectedGeneral);
-      if (selectedBlue > maxSelected) {
-        const current = numericControlValue(control);
-        setControlQuantity(control, Math.max(0, current - (selectedBlue - maxSelected)));
-      }
-    }
+  function clampParkingControl(control,row) {
+    const group=groupByKey('parking'); const remaining=remoteRemaining(group); if(remaining==null)return;
+    const total=selectedForGroup('parking'); const excess=Math.max(0,total-remaining); if(!excess)return;
+    const current=numericValue(control); setControl(control,Math.max(0,current-Math.min(excess,current)));
+    statusMessage('Only the remaining parking spaces can be selected. Paid and Blue Badge parking use the same 150-space pool.');
   }
 
   function installSpillHandlers() {
-    if (spillHandlersInstalled) return;
-    spillHandlersInstalled = true;
-
-    // Document capture runs before the established mount-level capacity guard.
-    // We let that guard clamp the current wave, then place the excess in the same
-    // ticket position in the next price band.
-    document.addEventListener('click', (event) => {
-      const button = event.target?.closest?.('button,a,[role="button"]');
-      if (!button || buttonIntent(button) !== 'increment') return;
-      const row = button.closest('.wfd-release-row[data-wfd-group-kind="admission"]');
-      if (!row) return;
-      const group = groupFromAvailability(row.dataset.wfdGroup);
-      const remaining = remoteRemaining(group);
-      if (remaining == null) return;
-      if (selectedForGroup(group.key) >= remaining) {
-        window.setTimeout(() => spillToNextWave(row, 1), 0);
+    if(spillHandlersInstalled)return; spillHandlersInstalled=true;
+    document.addEventListener('click',(event)=>{
+      const button=event.target?.closest?.('button,a,[role="button"]'); if(!button||!incrementIntent(button))return;
+      const row=button.closest('.wfd-release-row'); if(!row)return;
+      if(row.dataset.wfdGroupKind==='admission'){
+        const group=groupByKey(row.dataset.wfdGroup); const remaining=remoteRemaining(group); if(remaining!=null&&selectedForGroup(group.key)>=remaining){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();spillToNext(row,1);}
+      } else if(row.dataset.wfdGroupKind==='parking'){
+        const group=groupByKey('parking'); const remaining=remoteRemaining(group); if(remaining!=null&&selectedForGroup('parking')>=remaining){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();statusMessage('Parking is at the maximum available.');}
       }
-    }, true);
-
-    document.addEventListener('input', (event) => {
-      const control = event.target;
-      if (!control) return;
-      const anyRow = control.closest?.('.wfd-release-row');
-      if (anyRow?.dataset?.wfdGroupKind === 'parking') {
-        enforceParkingSelection(control, anyRow);
-        schedulePatch();
-        return;
-      }
-      const row = control.closest?.('.wfd-release-row[data-wfd-group-kind="admission"]');
-      if (!row) return;
-      const group = groupFromAvailability(row.dataset.wfdGroup);
-      const remaining = remoteRemaining(group);
-      if (remaining == null) return;
-      const total = selectedForGroup(group.key);
-      const excess = Math.max(total - remaining, 0);
-      if (excess > 0) window.setTimeout(() => spillToNextWave(row, excess), 0);
-    }, true);
+    },true);
+    const onControl=(event)=>{
+      const control=event.target; const row=control?.closest?.('.wfd-release-row'); if(!row)return;
+      if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row);
+      schedulePatch();
+    };
+    document.addEventListener('input',onControl,true); document.addEventListener('change',onControl,true);
   }
 
-  function applyOrdinalTextFixes() {
-    const root = document.querySelector('.post-purchase-card');
-    if (!root || root.dataset.wfdOrdinals === 'true') return;
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach((node) => {
-      node.nodeValue = String(node.nodeValue || '')
-        .replace(/Friday 13 November/g, 'Friday 13th November')
-        .replace(/Saturday 7 November/g, 'Saturday 7th November');
-    });
-    root.dataset.wfdOrdinals = 'true';
+  function applyOrdinals() {
+    const root=document.querySelector('.post-purchase-card'); if(!root||root.dataset.wfdOrdinals==='true')return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach((n)=>{n.nodeValue=String(n.nodeValue||'').replace(/Friday 13 November/g,'Friday 13th November').replace(/Saturday 7 November/g,'Saturday 7th November');}); root.dataset.wfdOrdinals='true';
   }
 
-  function patchTicketPresentation() {
-    ensurePageStructure();
-    ensureTravelPlanningNote();
-    enhanceTravelCards();
-    allAvailabilityGroups().forEach(renderKnownCounter);
-    reorderPreschool();
-    enforceWaveVisibility();
-    ensureBlueBadgeDescription();
-    renderPriceTable();
-    applyOrdinalTextFixes();
+  function patchPresentation() {
+    ensurePageStructure(); ensureTravelPlanningNote(); enhanceTravelCards();
+    allGroups().forEach(renderCounter); reorderPreschool(); enforceWaveVisibility(); ensureTicketNames(); alignQuantityControls(); ensureBlueBadgeNote(); renderPriceTable(); applyOrdinals();
+    document.querySelector('.ticket-help')?.remove();
+    const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v24-tito-email')){const p=document.createElement('p');p.className='wfd-v24-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
+  }
 
-    const help = document.querySelector('.ticket-help');
-    if (help) help.remove();
+  function schedulePatch(){if(patchScheduled)return;patchScheduled=true;window.requestAnimationFrame(()=>{patchScheduled=false;patchPresentation();});}
 
-    const success = document.querySelector('.post-purchase-success');
-    if (success && !success.querySelector('.wfd-v23-tito-email')) {
-      const p = document.createElement('p');
-      p.className = 'wfd-v23-tito-email';
-      p.innerHTML = '<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';
-      success.querySelector('div')?.appendChild(p);
+  window.setInterval=function(fn,delay,...args){const body=typeof fn==='function'?Function.prototype.toString.call(fn):'';if(Number(delay)===10000&&/refreshAvailability/.test(body))return nativeSetInterval(()=>{if(document.visibilityState!=='hidden')fn(...args);},30000);return nativeSetInterval(fn,delay,...args);};
+
+  window.fetch=async function(input,init){
+    if(typeof input==='string'&&input.startsWith('/api/ticket-availability')){
+      const url=new URL(input,window.location.href);url.searchParams.delete('_');const response=await nativeFetch(`${url.pathname}${url.search}`,{...init,cache:'default'});
+      response.clone().json().then((payload)=>{if(payload?.ok){latestAvailability=payload;window.dispatchEvent(new CustomEvent('wfd:v24-availability',{detail:payload}));schedulePatch();}}).catch(()=>{});return response;
     }
-  }
-
-  function schedulePatch() {
-    if (patchScheduled) return;
-    patchScheduled = true;
-    window.requestAnimationFrame(() => { patchScheduled = false; patchTicketPresentation(); });
-  }
-
-  // Keep the established 10-second code path but actually refresh every 30 seconds
-  // only while the page is visible.
-  window.setInterval = function patchedSetInterval(fn, delay, ...args) {
-    const body = typeof fn === 'function' ? Function.prototype.toString.call(fn) : '';
-    if (Number(delay) === 10000 && /refreshAvailability/.test(body)) {
-      return nativeSetInterval(() => { if (document.visibilityState !== 'hidden') fn(...args); }, 30000);
+    if(typeof input==='string'&&input==='/api/post-purchase-preference'&&init?.body){
+      postPurchaseWriteSeen=true;if(travelAutosaveTimer){window.clearTimeout(travelAutosaveTimer);travelAutosaveTimer=null;}
+      try{const body=JSON.parse(init.body);const travel=readTravel();if(travel){body.answers=body.answers&&typeof body.answers==='object'?body.answers:{};if(!body.answers.travel)body.answers.travel=travel;return nativeFetch(input,{...init,body:JSON.stringify(body)});}}catch{/* leave request unchanged */}
     }
-    return nativeSetInterval(fn, delay, ...args);
+    return nativeFetch(input,init);
   };
 
-  // Remove the cache-busting timestamp so Netlify's shared cache can collapse
-  // availability traffic. Capture the response for counters/prices/presentation.
-  window.fetch = async function patchedFetch(input, init) {
-    if (typeof input === 'string' && input.startsWith('/api/ticket-availability')) {
-      const url = new URL(input, window.location.href);
-      url.searchParams.delete('_');
-      const response = await nativeFetch(`${url.pathname}${url.search}`, { ...init, cache: 'default' });
-      response.clone().json().then((payload) => {
-        if (payload?.ok) {
-          latestAvailability = payload;
-          window.dispatchEvent(new CustomEvent('wfd:v23-availability', { detail: payload }));
-          schedulePatch();
-        }
-      }).catch(() => {});
-      return response;
-    }
-
-    if (typeof input === 'string' && input === '/api/post-purchase-preference' && init?.body) {
-      postPurchaseWriteSeen = true;
-      if (travelAutosaveTimer) { window.clearTimeout(travelAutosaveTimer); travelAutosaveTimer = null; }
-      try {
-        const body = JSON.parse(init.body);
-        const travel = readTravel();
-        if (travel) {
-          body.answers = body.answers && typeof body.answers === 'object' ? body.answers : {};
-          if (!body.answers.travel) body.answers.travel = travel;
-          return nativeFetch(input, { ...init, body: JSON.stringify(body) });
-        }
-      } catch { /* leave established request untouched */ }
-    }
-    return nativeFetch(input, init);
-  };
-
-  window.addEventListener('wfd:registration-finished', (event) => {
-    const registration = event.detail || {};
-    const travel = readTravel();
-    const registrationSlug = String(registration.slug || '');
-    const reference = String(registration.reference || '');
-    postPurchaseWriteSeen = false;
-    if (travelAutosaveTimer) window.clearTimeout(travelAutosaveTimer);
-    if (!travel || !registrationSlug || !reference) return;
-    travelAutosaveTimer = window.setTimeout(() => {
-      travelAutosaveTimer = null;
-      if (postPurchaseWriteSeen) return;
-      postPurchaseWriteSeen = true;
-      nativeFetch('/api/post-purchase-preference', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        keepalive: true,
-        body: JSON.stringify({ registrationSlug, reference, answers: { travel } })
-      }).catch(() => {});
-    }, 4000);
+  window.addEventListener('wfd:registration-finished',(event)=>{
+    const registration=event.detail||{};const travel=readTravel();const registrationSlug=String(registration.slug||'');const reference=String(registration.reference||'');postPurchaseWriteSeen=false;
+    if(travelAutosaveTimer)window.clearTimeout(travelAutosaveTimer);if(!travel||!registrationSlug||!reference)return;
+    travelAutosaveTimer=window.setTimeout(()=>{travelAutosaveTimer=null;if(postPurchaseWriteSeen)return;postPurchaseWriteSeen=true;nativeFetch('/api/post-purchase-preference',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},keepalive:true,body:JSON.stringify({registrationSlug,reference,answers:{travel}})}).catch(()=>{});},4000);
   });
 
-  window.addEventListener('wfd:v23-availability', schedulePatch);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') schedulePatch(); });
+  window.addEventListener('wfd:v24-availability',schedulePatch);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')schedulePatch();});
 
-  function initialise() {
-    ensureV23Styles();
-    ensurePageStructure();
-    installDelegatedTravelEvents();
-    readTravel();
-    schedulePatch();
-    document.getElementById('travel-choices')?.addEventListener('input', schedulePatch, true);
-    document.getElementById('travel-choices')?.addEventListener('change', schedulePatch, true);
-    document.getElementById('tito-mount')?.addEventListener('input', schedulePatch, true);
-    document.getElementById('tito-mount')?.addEventListener('change', schedulePatch, true);
-    if (!observer) {
-      observer = new MutationObserver(schedulePatch);
-      observer.observe(document.body, { childList: true, subtree: true });
-    }
-  }
+  function initialise(){ensureStyles();ensurePageStructure();installTravelEvents();readTravel();schedulePatch();if(!observer){observer=new MutationObserver(schedulePatch);observer.observe(document.body,{childList:true,subtree:true});}}
 
-  // Install capture handlers immediately, before the deferred base integration.
-  installSpillHandlers();
-  ensureV23Styles();
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialise, { once: true });
-  else initialise();
+  installSpillHandlers(); ensureStyles();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialise,{once:true});else initialise();
 })();

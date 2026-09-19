@@ -1,7 +1,7 @@
-Wotton Fireworks 2026 Tito integration package v25
+Wotton Fireworks 2026 Tito integration package v26
 ===================================================
 
-V25 IS CUMULATIVE OVER V24
+V26 IS CUMULATIVE OVER V25
 --------------------------
 Upload the package contents over the 2026 branch, preserving the paths shown.
 
@@ -19,40 +19,35 @@ Replace:
   /VERSION.txt
 
 Add/replace:
-  /docs/integration-v25.md
+  /docs/integration-v26.md
 
 Delete if present:
-  /docs/integration-v24.md
+  /docs/integration-v25.md
 
 DO NOT REPLACE
 --------------
 Do not overwrite /netlify/functions/_lib/integration-config-2026.mjs. Existing Tito IDs/slugs entered there must remain intact.
 
-TITO ACTIVITY MODEL EXPECTED BY V25
------------------------------------
+TITO ACTIVITY MODEL
+-------------------
 # Event Capacity          3,500 overall admissions
-# Parking Capacity          150 all parking tickets
+# Parking Capacity          150 shared paid + Blue Badge spaces
 Release 1 - Super Saver     300
 Release 2 - Advance         700
 Release 3 - Standard        unlimited at release level
 
-All admission types that count toward attendance, including comps/pre-school where appropriate, should also count against # Event Capacity. Standard therefore uses remaining Event Capacity rather than a fixed 2,500 website cap.
+Pre-school/comps should count against # Event Capacity in Tito. Standard therefore uses the remaining Event Capacity rather than a separate fixed website allocation.
 
 QUICK TEST
 ----------
-1. Confirm the What's On chips are readable (dark text on bright yellow) and programme times/body copy have adequate contrast.
-2. Confirm the Prices table shows Pre-school first, then Primary / Secondary & Sixth Form / Adult across Super Saver / Advance / Standard.
-3. Confirm the separate Parking tickets table has only Ticket + Price columns and its Price header says “150 spaces until sold out or 7.30pm Saturday 7th November”.
-4. Confirm Step 2 choice buttons sit at the bottom of all three travel cards.
-5. Confirm Step 3 and the Tito selector are dark.
-6. Confirm each ticket retains its visible ticket name.
-7. Confirm the - / quantity / + controls form one right-aligned cluster.
-8. Set Super Saver to its available limit and add one more of a ticket type. Confirm the extra ticket appears in the matching Advance type without leaving Super Saver above its limit. Repeat Advance -> Standard.
-9. Confirm after automatic correction Tito's Continue button becomes usable when the selection is valid.
-10. Confirm Standard availability follows remaining # Event Capacity. Issue/hold a comp or pre-school test admission and verify Standard remaining falls accordingly.
-11. Confirm paid + Blue Badge parking share one 150-space counter.
-12. Confirm “A valid Blue Badge must be displayed in the vehicle.” is within the Blue Badge ticket description.
-13. Confirm no rendered ticket description says under-16s must be accompanied.
-14. Complete a test checkout and confirm the post-purchase Tito email reminder still appears.
+1. Change quantities repeatedly and confirm no old counter wording flashes (for example “Availability is shared…” or “left at this price”).
+2. Trigger an automatic spill/reduction. Confirm the adjusted quantity flashes and the warning remains until **OK** is pressed.
+3. Add a Pre-school ticket and confirm the browser-side remaining overall admission capacity reduces by one (most visible when checking Standard availability).
+4. Confirm the FAQ kicker says **FAQ**.
+5. Confirm the FAQ is one rounded panel; questions use white right/down triangles on the left and no +/- controls overlap the text.
+6. Confirm the gap between the ticket section and Plan your visit is materially smaller.
+7. Confirm **Need an update?** is again a full-width yellow section, not a dark inset panel.
+8. Re-test Super Saver -> Advance -> Standard spillover and the shared 150-space parking counter.
+9. Complete a test checkout and confirm Tito confirmation/QR emails and the post-purchase follow-up still behave normally.
 
 No new Netlify environment variables are required.

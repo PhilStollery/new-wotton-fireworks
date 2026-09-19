@@ -300,6 +300,41 @@ window.FIREWORKS_EVENT = {
       .ticket-help{display:none!important}
       .wfd-v25-tito-email{margin-top:.55rem;font-size:.92rem}
 
+      /* v26: never expose the legacy counter copy while the old selector code
+         briefly rewrites a counter. Our replacement children are classed. */
+      #tito-mount .wfd-group-counter>strong:not(.wfd-v26-counter-title),
+      #tito-mount .wfd-group-counter>span:not(.wfd-v26-counter-status){visibility:hidden!important}
+
+      /* Keep adjoining dark sections visually connected without a large dead zone. */
+      #tickets.section{padding-bottom:44px!important}
+      #visit.section{padding-top:44px!important}
+
+      /* Capacity corrections remain visible until the customer acknowledges them. */
+      #tito-mount .wfd-capacity-message{display:flex;align-items:center;justify-content:space-between;gap:14px}
+      #tito-mount .wfd-capacity-message-copy{min-width:0}
+      #tito-mount .wfd-capacity-message-ack{flex:0 0 auto;appearance:none;border:1px solid #FBC15C;background:#FBC15C;color:#1D1D1A;border-radius:999px;padding:.38rem .72rem;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}
+      #tito-mount .wfd-capacity-message-ack:hover,#tito-mount .wfd-capacity-message-ack:focus-visible{filter:brightness(.96);outline:2px solid #fff;outline-offset:2px}
+
+      /* FAQ is one rounded panel with clear disclosure triangles rather than +/- controls. */
+      .faq-list{position:relative!important;overflow:hidden!important;border:1px solid #54544c!important;border-radius:16px!important;background:#292925!important}
+      .faq-list::after{content:""!important;display:block!important;position:absolute!important;top:14px!important;right:14px!important;width:27px!important;height:27px!important;background:url('/images/2026/rtgbi-roundel-white.png') center/contain no-repeat!important;opacity:.68!important;pointer-events:none!important;z-index:3!important}
+      .faq-list details{position:relative!important;overflow:visible!important;border:0!important;border-bottom:1px solid #54544c!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+      .faq-list details:last-child{border-bottom:0!important}
+      .faq-list details::after{content:none!important;display:none!important}
+      .faq-list summary{position:relative!important;list-style:none!important;padding:17px 54px 17px 42px!important;color:#fff!important}
+      .faq-list summary::-webkit-details-marker{display:none!important}
+      .faq-list summary::before{content:"▸"!important;position:absolute!important;left:16px!important;top:50%!important;transform:translateY(-50%)!important;color:#fff!important;font-size:1rem!important;line-height:1!important}
+      .faq-list details[open] summary::before{content:"▾"!important}
+      .faq-list summary::after{content:none!important;display:none!important}
+      .faq-list details p{margin:0!important;padding:0 18px 18px 42px!important;color:rgba(255,255,255,.82)!important}
+
+      /* Restore the original full-width orange update band. */
+      main>.section.section-yellow{background:var(--yellow)!important;color:var(--grey)!important}
+      .section-yellow .contact{background:transparent!important;color:var(--grey)!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important}
+      .section-yellow .contact::after{content:none!important;display:none!important}
+      .section-yellow .contact h2,.section-yellow .contact p,.section-yellow .contact a:not(.button){color:var(--grey)!important}
+      .section-yellow .contact a:not(.button){text-decoration-color:currentColor!important}
+
       @media(max-width:900px){#travel-choices.travel-strip{grid-template-columns:1fr}}
       @media(max-width:650px){
         .price-table{min-width:620px}.parking-price-table{min-width:500px}
@@ -313,6 +348,8 @@ window.FIREWORKS_EVENT = {
   }
 
   function ensurePageStructure() {
+    const faqKicker = document.querySelector('#faq .section-heading .kicker');
+    if (faqKicker && faqKicker.textContent !== 'FAQ') faqKicker.textContent = 'FAQ';
     if (pageStructureReady) return;
     const ticketSection = document.getElementById('tickets');
     if (!ticketSection) return;
@@ -469,7 +506,10 @@ window.FIREWORKS_EVENT = {
   function groupRows(key) { return [...document.querySelectorAll(`.wfd-release-row[data-wfd-group="${CSS.escape(String(key))}"]`)]; }
   function numericValue(control) { const n=Number(control?.value); return Number.isFinite(n)&&n>0?Math.floor(n):0; }
   function selectedForGroup(key) { return groupRows(key).reduce((sum,row)=>sum+numericValue(row.querySelector('input[type="number"],select')),0); }
-  function totalAdmissionSelected() { return (latestAvailability?.waves || []).reduce((sum,wave)=>sum+selectedForGroup(wave.key),0); }
+  function totalAdmissionSelected() {
+    const paid=(latestAvailability?.waves || []).reduce((sum,wave)=>sum+selectedForGroup(wave.key),0);
+    return paid+selectedForGroup('preschool');
+  }
   function eventRemaining() {
     const n=Number(latestAvailability?.admissionCapacity?.remaining);
     return Number.isFinite(n)?Math.max(0,n):null;
@@ -504,7 +544,7 @@ window.FIREWORKS_EVENT = {
 
   function patchCounter(key,title,status='',opts={}) {
     const counter=document.querySelector(`.wfd-group-counter[data-wfd-group-counter="${CSS.escape(String(key))}"]`); if(!counter)return null;
-    const html=`<strong>${escapeHtml(title)}</strong><span>${escapeHtml(status)}</span>`; if(counter.innerHTML!==html)counter.innerHTML=html;
+    const html=`<strong class="wfd-v26-counter-title">${escapeHtml(title)}</strong><span class="wfd-v26-counter-status">${escapeHtml(status)}</span>`; if(counter.innerHTML!==html)counter.innerHTML=html;
     counter.classList.toggle('is-empty',Boolean(opts.empty)); return counter;
   }
 
@@ -689,11 +729,21 @@ window.FIREWORKS_EVENT = {
     if(flash){control.classList.remove('wfd-needs-reduction');control.classList.add('wfd-auto-adjusted');window.setTimeout(()=>control.classList.remove('wfd-auto-adjusted'),1600);}
   }
 
-  function statusMessage(text) {
+  function statusMessage(text,{acknowledge=false}={}) {
     const mount=document.getElementById('tito-mount'); if(!mount)return;
-    let el=mount.querySelector('.wfd-capacity-message'); if(!el){el=document.createElement('div');el.className='wfd-capacity-message';el.setAttribute('role','status');el.setAttribute('aria-live','polite');mount.appendChild(el);}
-    el.textContent=text; el.hidden=!text;
-    if(messageTimer)window.clearTimeout(messageTimer); if(text)messageTimer=window.setTimeout(()=>{el.hidden=true;},6500);
+    let el=mount.querySelector('.wfd-capacity-message');
+    if(!el){el=document.createElement('div');el.className='wfd-capacity-message';mount.appendChild(el);}
+    if(messageTimer){window.clearTimeout(messageTimer);messageTimer=null;}
+    el.replaceChildren();
+    if(!text){el.hidden=true;return;}
+    const copy=document.createElement('span');copy.className='wfd-capacity-message-copy';copy.textContent=text;el.appendChild(copy);
+    el.setAttribute('role',acknowledge?'alert':'status');el.setAttribute('aria-live',acknowledge?'assertive':'polite');
+    if(acknowledge){
+      const button=document.createElement('button');button.type='button';button.className='wfd-capacity-message-ack';button.textContent='OK';button.addEventListener('click',()=>{el.hidden=true;});el.appendChild(button);
+    } else {
+      messageTimer=window.setTimeout(()=>{el.hidden=true;messageTimer=null;},6500);
+    }
+    el.hidden=false;
   }
 
   function spillToNext(sourceRow,quantity,attempt=0) {
@@ -707,7 +757,7 @@ window.FIREWORKS_EVENT = {
     const row=document.querySelector(`.wfd-release-row[data-wfd-release="${CSS.escape(String(targetRelease.slug))}"]`); const control=row?.querySelector('input[type="number"],select');
     if(!control){if(attempt<8)window.setTimeout(()=>spillToNext(sourceRow,quantity,attempt+1),50);return false;}
     notifyControl(control,numericValue(control)+quantity);
-    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`);
+    statusMessage(`${quantity} ${quantity===1?'ticket':'tickets'} moved from ${current.label} to ${next.label}: ${cleanTicketTitle(source.title,current.label)}.`,{acknowledge:true});
     schedulePatch(); return true;
   }
 
@@ -723,7 +773,7 @@ window.FIREWORKS_EVENT = {
     notifyControl(control,Math.max(0,current-moved));
     const next=nextWaveFor(group.key);
     if(next) window.setTimeout(()=>spillToNext(row,moved),0);
-    else statusMessage(`${cleanTicketTitle(releaseForRow(row)?.title,group.label)} has been reduced to keep the order within the remaining event capacity.`);
+    else statusMessage(`${cleanTicketTitle(releaseForRow(row)?.title,group.label)} has been reduced to keep the order within the remaining event capacity.`,{acknowledge:true});
   }
 
   function clampParkingControl(control,row) {
@@ -732,7 +782,17 @@ window.FIREWORKS_EVENT = {
     control.classList.add('wfd-needs-reduction');
     const current=numericValue(control); const reduce=Math.min(excess,current); if(!reduce)return;
     notifyControl(control,Math.max(0,current-reduce));
-    statusMessage('Your parking quantity has been reduced to the number of spaces still available.');
+    statusMessage('Your parking quantity has been reduced to the number of spaces still available.',{acknowledge:true});
+  }
+
+  function clampPreschoolControl(control) {
+    const eventLeft=eventRemaining(); if(eventLeft==null)return;
+    const excess=Math.max(0,totalAdmissionSelected()-eventLeft);
+    if(!excess){control.classList.remove('wfd-needs-reduction');return;}
+    control.classList.add('wfd-needs-reduction');
+    const current=numericValue(control); const reduce=Math.min(excess,current); if(!reduce)return;
+    notifyControl(control,Math.max(0,current-reduce));
+    statusMessage('The Pre-school quantity has been reduced to keep the order within the remaining event capacity.',{acknowledge:true});
   }
 
   function installSpillHandlers() {
@@ -744,12 +804,14 @@ window.FIREWORKS_EVENT = {
         const group=groupByKey(row.dataset.wfdGroup); const remaining=remoteRemaining(group); if(remaining!=null&&selectedForGroup(group.key)>=remaining){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();spillToNext(row,1);}
       } else if(row.dataset.wfdGroupKind==='parking'){
         const group=groupByKey('parking'); const remaining=remoteRemaining(group); if(remaining!=null&&selectedForGroup('parking')>=remaining){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();statusMessage('Parking is at the maximum available.');}
+      } else if(row.dataset.wfdGroup==='preschool'){
+        const eventLeft=eventRemaining(); if(eventLeft!=null&&totalAdmissionSelected()>=eventLeft){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();statusMessage('No further admission tickets are available within the remaining event capacity.');}
       }
     },true);
     const onControl=(event)=>{
       if(autoAdjusting){schedulePatch();return;}
       const control=event.target; const row=control?.closest?.('.wfd-release-row'); if(!row)return;
-      if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row);
+      if(row.dataset.wfdGroupKind==='admission')clampAdmissionControl(control,row); else if(row.dataset.wfdGroupKind==='parking')clampParkingControl(control,row); else if(row.dataset.wfdGroup==='preschool')clampPreschoolControl(control);
       schedulePatch();
     };
     document.addEventListener('input',onControl,true); document.addEventListener('change',onControl,true);
@@ -768,7 +830,7 @@ window.FIREWORKS_EVENT = {
     const success=document.querySelector('.post-purchase-success'); if(success&&!success.querySelector('.wfd-v25-tito-email')){const p=document.createElement('p');p.className='wfd-v25-tito-email';p.innerHTML='<strong>Look out for emails from Tito.</strong> Tito is our ticketing provider and sends your booking confirmation and ticket QR codes. If they do not arrive, please check your junk or spam folder.';success.querySelector('div')?.appendChild(p);}
   }
 
-  function schedulePatch(){if(patchScheduled)return;patchScheduled=true;window.requestAnimationFrame(()=>{patchScheduled=false;patchPresentation();});}
+  function schedulePatch(){if(patchScheduled)return;patchScheduled=true;queueMicrotask(()=>{patchScheduled=false;patchPresentation();});}
 
   window.setInterval=function(fn,delay,...args){const body=typeof fn==='function'?Function.prototype.toString.call(fn):'';if(Number(delay)===10000&&/refreshAvailability/.test(body))return nativeSetInterval(()=>{if(document.visibilityState!=='hidden')fn(...args);},30000);return nativeSetInterval(fn,delay,...args);};
 

@@ -1,20 +1,17 @@
-# Wotton-under-Edge Firework Display 2026 — Tito integration v25
+# Wotton-under-Edge Firework Display 2026 — Tito integration v26
 
-V25 is cumulative over v24 and responds to the latest ticket-selector/visual review.
+V26 is cumulative over v25 and fixes the latest selector/section review without changing Tito checkout itself.
 
 Key changes:
 
-- Standard is no longer hard-capped at 2,500 in the website. It uses the remaining `# Event Capacity`, so comps and pre-school tickets correctly reduce later Standard availability.
-- The renamed `Release 2 - Advance` Activity is recognised explicitly.
-- Pre-school sits above Primary School Age in the price matrix, with its single price spanning all three paid release columns.
-- Parking has its own compact two-column price table; the header carries the 150-space / closing-time information once.
-- The selector now uses the dark site theme, with brighter programme contrast and readable highlight tags.
-- Travel-choice controls align at the bottom of the cards.
-- Quantity minus/input/plus controls are grouped and right-aligned.
-- Automatic spillover notifies Tito after correcting both source and destination quantities, so the selector's Continue state is recalculated.
-- Automatically corrected quantities flash to make the change visible; an uncorrected over-limit field receives a red highlight.
-- The Blue Badge display requirement is inserted into the Blue Badge ticket description, not shown as a separate header/note.
-- Old under-16 accompaniment text is removed from rendered Tito ticket descriptions.
-- Pre-school descriptions no longer repeat “Free”; the price remains the single place that states it.
+- Legacy v10/v11 counter wording is now suppressed at CSS level and replaced in a microtask, so old copy such as “Availability is shared…” / “left at this price” should no longer flash during quantity changes.
+- Automatic quantity corrections remain visible until the customer presses **OK** rather than disappearing on a timer.
+- Pre-school selections are included in the browser-side use of the overall `# Event Capacity`, so they immediately reduce the remaining admission capacity shown to later bands.
+- The FAQ kicker now says **FAQ**.
+- The FAQ list is restored as one rounded panel, with white right/down disclosure triangles on the left instead of overlapping +/- controls.
+- The excessive vertical gap between Tickets and Plan your visit is reduced.
+- The **Need an update?** area is restored to the full-width Round Table yellow treatment instead of a dark inset panel.
+
+All v25 availability behaviour is retained: Super Saver and Advance use their Tito Activity capacities; Standard uses remaining overall Event Capacity; paid and Blue Badge parking share the single 150-space Parking Capacity Activity.
 
 Tito remains responsible for checkout, payment, confirmation emails, QR codes, reservations/holds and gate check-in.

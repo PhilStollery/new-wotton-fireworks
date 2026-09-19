@@ -1,0 +1,12 @@
+{
+  "name": "wotton-firework-display-2026",
+  "private": true,
+  "version": "2026.0.0",
+  "description": "Wotton-under-Edge Firework Display website and Netlify/Tito integration",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "luxon": "3.7.2"
+  }
+}

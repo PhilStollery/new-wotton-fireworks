@@ -1,0 +1,1065 @@
+/* Ticket integration additions for the 2026 development branch. */
+.source-support-card,
+.ticket-availability,
+.ticket-selection-warning {
+  margin: 0 0 16px;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.source-support-card[hidden],
+.ticket-availability[hidden],
+.ticket-selection-warning[hidden] {
+  display: none !important;
+}
+
+.source-support-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+  background: #FFF3D7;
+  color: var(--grey);
+  border: 2px solid var(--yellow);
+}
+
+.source-support-card .support-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--grey);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.source-support-card strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.source-support-card p {
+  margin-top: 5px;
+  color: #5D5547;
+}
+
+.ticket-availability {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  background: #292925;
+  border: 1px solid #4A4A43;
+  color: white;
+}
+
+.ticket-availability strong {
+  color: var(--yellow);
+  font-size: 1.12rem;
+}
+
+.ticket-availability span {
+  color: rgba(255,255,255,.72);
+  font-size: .9rem;
+  text-align: right;
+}
+
+.ticket-selection-warning {
+  background: #FFF4F2;
+  color: #5E221E;
+  border: 2px solid #C65A4D;
+  box-shadow: 0 10px 26px rgba(0,0,0,.12);
+}
+
+.ticket-selection-warning strong {
+  display: block;
+  font-size: 1.08rem;
+}
+
+.ticket-selection-warning p {
+  margin-top: 4px;
+}
+
+.ticket-box.is-loading #tito-mount {
+  min-height: 120px;
+}
+
+.ticket-integration-state {
+  text-align: center;
+  padding: 26px 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.ticket-integration-state strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+.ticket-integration-state p {
+  color: var(--muted);
+}
+
+/* Tito Widget v2 inline exposes ordinary HTML, so inherit the event typography. */
+tito-widget,
+#tito-mount {
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+tito-widget input,
+tito-widget select,
+tito-widget button,
+tito-widget textarea {
+  font: inherit;
+}
+
+tito-widget button,
+tito-widget input[type="submit"] {
+  border-radius: 999px;
+}
+
+@media (max-width: 650px) {
+  .source-support-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-availability {
+    display: grid;
+    gap: 4px;
+  }
+
+  .ticket-availability span {
+    text-align: left;
+  }
+}
+
+/* Venue map restored for the 2026 event guide. */
+.venue-map-card {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  gap: 0;
+  overflow: hidden;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.07);
+}
+
+.venue-map-copy {
+  padding: clamp(24px, 4vw, 34px);
+}
+
+.venue-map-copy h3 {
+  font-size: clamp(1.45rem, 2.5vw, 2rem);
+}
+
+.venue-map-copy p:not(.kicker) {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.venue-map-frame {
+  min-height: 330px;
+  background: #e8e5dc;
+}
+
+.venue-map-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 330px;
+  border: 0;
+}
+
+.contact a:not(.button),
+.faq-list a {
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .venue-map-card {
+    grid-template-columns: 1fr;
+  }
+
+  .venue-map-frame,
+  .venue-map-frame iframe {
+    min-height: 280px;
+  }
+}
+
+/* v6: availability, warning and the Tito selector are one visual control. */
+.ticket-box {
+  background: white !important;
+}
+
+.ticket-selector-shell {
+  width: min(100%, 780px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ticket-selector-shell > .ticket-availability {
+  width: 100%;
+  margin: 0;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 1px solid #DED7C8;
+  border-radius: 0;
+  background: #F6F0E2;
+  color: var(--grey);
+  box-shadow: none;
+}
+
+.ticket-selector-shell > .ticket-availability strong {
+  color: #8B6217;
+  font-size: 1rem;
+}
+
+.ticket-selector-shell > .ticket-availability span {
+  color: var(--muted);
+  font-size: .84rem;
+}
+
+.ticket-selector-shell > .ticket-selection-warning {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid #E8AAA3;
+  border-radius: 0;
+  background: #FFF4F2;
+  box-shadow: none;
+}
+
+#tito-mount {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+#tito-mount tito-widget {
+  display: block;
+  width: 100%;
+  margin: 0 !important;
+  color: var(--grey);
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+/* Tito Widget V2 is deliberately loaded inline, so its ordinary HTML can be
+   blended into the event site without replacing Tito's checkout behaviour. */
+#tito-mount tito-widget form,
+#tito-mount tito-widget form > div,
+#tito-mount tito-widget > div {
+  margin-top: 0 !important;
+}
+
+#tito-mount tito-widget input[type="number"],
+#tito-mount tito-widget select {
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--grey) !important;
+  font-weight: 700 !important;
+}
+
+#tito-mount tito-widget button,
+#tito-mount tito-widget input[type="submit"] {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  font-weight: 800 !important;
+  border-radius: 999px !important;
+}
+
+#tito-mount tito-widget button:not(:disabled),
+#tito-mount tito-widget input[type="submit"]:not(:disabled) {
+  border-color: var(--grey) !important;
+}
+
+#tito-mount tito-widget button[type="submit"],
+#tito-mount tito-widget input[type="submit"],
+#tito-mount tito-widget button:last-of-type {
+  background: var(--grey) !important;
+  color: #fff !important;
+}
+
+#tito-mount tito-widget button:focus-visible,
+#tito-mount tito-widget input:focus-visible,
+#tito-mount tito-widget select:focus-visible {
+  outline: 3px solid var(--yellow) !important;
+  outline-offset: 2px;
+}
+
+/* First-pass checkout overlay treatment. The JS marks Tito's injected dialog so
+   we can style it without depending on Tito's private class names. */
+.wfd-tito-overlay {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  backdrop-filter: blur(2px);
+}
+
+.wfd-tito-dialog {
+  font-family: "Open Sans", Arial, sans-serif !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.28) !important;
+}
+
+.wfd-tito-dialog a {
+  color: #7a5514 !important;
+  text-underline-offset: 2px;
+}
+
+.wfd-tito-dialog button,
+.wfd-tito-dialog input,
+.wfd-tito-dialog select,
+.wfd-tito-dialog textarea {
+  font-family: "Open Sans", Arial, sans-serif !important;
+}
+
+.wfd-tito-share-row,
+.wfd-tito-share-row[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 650px) {
+  .ticket-selector-shell > .ticket-availability {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+  }
+
+  .ticket-selector-shell > .ticket-availability span {
+    text-align: left;
+  }
+
+  .ticket-selector-shell > .ticket-selection-warning {
+    padding: 11px 12px;
+  }
+
+  .wfd-tito-dialog {
+    border-radius: 14px 14px 0 0 !important;
+  }
+}
+
+/* v10: later price bands stay mounted in Tito's one stable widget, but each
+   band is presented as its own counter + ticket-row block. */
+#tito-mount .wfd-group-counter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 0;
+  padding: 11px 16px;
+  background: #F6F0E2;
+  border-top: 1px solid #DED7C8;
+  border-bottom: 1px solid #DED7C8;
+  color: var(--grey);
+}
+
+#tito-mount .wfd-group-counter:first-child {
+  border-top: 0;
+}
+
+#tito-mount .wfd-group-counter[hidden],
+#tito-mount .wfd-release-row[hidden] {
+  display: none !important;
+}
+
+#tito-mount .wfd-group-counter strong {
+  color: #8B6217;
+  font-size: 1rem;
+}
+
+#tito-mount .wfd-group-counter span {
+  color: var(--muted);
+  font-size: .84rem;
+  text-align: right;
+}
+
+#tito-mount .wfd-group-counter.is-empty {
+  background: #FFF3D7;
+}
+
+#tito-mount .wfd-group-counter.is-empty strong {
+  color: #6D4A0B;
+}
+
+#tito-mount .wfd-group-counter.is-over {
+  background: #FFF4F2;
+  border-color: #E8AAA3;
+}
+
+#tito-mount .wfd-group-counter.is-over strong {
+  color: #8A3028;
+}
+
+/* Quantity limits are enforced locally in the embedded selector. The + button
+   is the positive action, so use the same Round Table orange as the page. Tito's
+   Continue button is deliberately left entirely under Tito's own control. */
+#tito-mount .wfd-quantity-plus {
+  background: var(--yellow) !important;
+  border-color: var(--yellow) !important;
+  color: var(--grey) !important;
+  font-weight: 800 !important;
+}
+
+#tito-mount .wfd-quantity-plus:hover:not(.wfd-quantity-maxed),
+#tito-mount .wfd-quantity-plus:focus-visible:not(.wfd-quantity-maxed) {
+  filter: brightness(.96);
+}
+
+#tito-mount .wfd-quantity-plus.wfd-quantity-maxed {
+  opacity: .42 !important;
+  cursor: not-allowed !important;
+}
+
+#tito-mount .wfd-release-row[data-wfd-group-kind="admission"]:not([hidden]),
+#tito-mount .wfd-group-counter[data-wfd-group-kind="admission"]:not([hidden]) {
+  animation: wfd-wave-reveal .14s ease-out;
+}
+
+@keyframes wfd-wave-reveal {
+  from { opacity: .35; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 650px) {
+  #tito-mount .wfd-group-counter {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+  }
+
+  #tito-mount .wfd-group-counter span {
+    text-align: left;
+  }
+}
+
+/* v11: make the ticket selector read as one continuous stack rather than a
+   Tito panel with counters floating inside its own padded rectangle. */
+#tito-mount tito-widget,
+#tito-mount .tito-widget,
+#tito-mount .tito-widget-form {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+#tito-mount .tito-widget-form .tito-release {
+  margin: 0 !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+#tito-mount .tito-widget-form .tito-form-actions {
+  margin: 0 !important;
+  padding: 20px !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+#tito-mount .wfd-group-counter {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* Native Tito quantity controls. Use circles and keep active/inactive state
+   obvious without changing Tito's own quantity model. */
+#tito-mount .tito-release--decrement-quantity > a,
+#tito-mount a.tito-release--decrement-quantity--link,
+#tito-mount .wfd-quantity-minus {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: var(--grey) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+}
+
+#tito-mount .tito-release--increment-quantity > a,
+#tito-mount a.tito-release--increment-quantity--link,
+#tito-mount .wfd-quantity-plus {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: var(--yellow) !important;
+  color: var(--grey) !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a svg,
+#tito-mount .tito-release--increment-quantity > a svg,
+#tito-mount a.tito-release--decrement-quantity--link svg,
+#tito-mount a.tito-release--increment-quantity--link svg,
+#tito-mount .wfd-quantity-minus svg,
+#tito-mount .wfd-quantity-plus svg {
+  display: none !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a::after,
+#tito-mount a.tito-release--decrement-quantity--link::after,
+#tito-mount .wfd-quantity-minus::after {
+  content: "−";
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#tito-mount .tito-release--increment-quantity > a::after,
+#tito-mount a.tito-release--increment-quantity--link::after,
+#tito-mount .wfd-quantity-plus::after {
+  content: "+";
+  color: currentColor;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#tito-mount a.tito-release--decrement-quantity--link--disabled,
+#tito-mount .tito-release--decrement-quantity > a[class*="disabled"],
+#tito-mount .wfd-quantity-minus[aria-disabled="true"] {
+  background: #888985 !important;
+  color: #fff !important;
+  cursor: default !important;
+}
+
+#tito-mount a.tito-release--increment-quantity--link--disabled,
+#tito-mount .tito-release--increment-quantity > a[class*="disabled"],
+#tito-mount .wfd-quantity-plus.wfd-quantity-maxed,
+#tito-mount .wfd-quantity-plus[aria-disabled="true"] {
+  background: #F6D59F !important;
+  color: #767676 !important;
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+@media (max-width: 650px) {
+  #tito-mount .tito-widget-form .tito-release {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  #tito-mount .tito-widget-form .tito-form-actions {
+    padding: 16px 12px !important;
+  }
+
+  #tito-mount .wfd-group-counter {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+
+/* v13: post-checkout follow-up stays inside the ticket section and uses the
+   confirmed Tito registration only as the place to store the customer's choices. */
+.ticket-box.showing-post-purchase .ticket-help {
+  display: none;
+}
+
+.post-purchase-followup[hidden] {
+  display: none !important;
+}
+
+.post-purchase-followup {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.post-purchase-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--grey);
+  box-shadow: 0 14px 34px rgba(0,0,0,.08);
+}
+
+.post-purchase-heading {
+  padding: 24px 26px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-purchase-heading h3 {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.post-purchase-heading > p:last-child {
+  color: var(--muted);
+  max-width: 760px;
+}
+
+.post-purchase-invite {
+  padding: 24px 26px 26px;
+  background: #FFF3D7;
+  border-bottom: 1px solid #E6C77F;
+}
+
+.post-purchase-invite-copy {
+  max-width: 780px;
+  margin-bottom: 18px;
+}
+
+.post-purchase-eyebrow {
+  display: inline-block;
+  margin-bottom: 5px;
+  color: #7A5514;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.post-purchase-invite-copy h4,
+.post-purchase-questions-heading h4,
+.post-purchase-choice-card h4 {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.post-purchase-invite-copy h4 {
+  font-size: 1.3rem;
+}
+
+.post-purchase-invite-copy p,
+.post-purchase-questions-heading p,
+.post-purchase-choice-card p,
+.post-purchase-footer p {
+  color: var(--muted);
+}
+
+.post-purchase-invite-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.post-purchase-invite-grid .post-purchase-choice-card {
+  border-color: #E2BE6C;
+  background: rgba(255,255,255,.78);
+}
+
+.post-purchase-questions {
+  padding: 24px 26px 10px;
+}
+
+.post-purchase-questions-heading {
+  margin-bottom: 12px;
+}
+
+.post-purchase-choice-card {
+  padding: 17px 18px;
+  margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.post-purchase-choice-card p {
+  margin-top: 6px;
+  font-size: .94rem;
+}
+
+.post-purchase-choice-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.post-purchase-choice {
+  min-height: 40px;
+  padding: .62rem .9rem;
+  border: 2px solid var(--grey);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--grey);
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.post-purchase-choice:hover,
+.post-purchase-choice:focus-visible {
+  background: #F6F3EC;
+}
+
+.post-purchase-choice.is-selected {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--grey);
+}
+
+.post-purchase-choice-secondary.is-selected {
+  background: var(--grey);
+  border-color: var(--grey);
+  color: #fff;
+}
+
+.post-purchase-saved {
+  min-width: 3.2rem;
+  color: #5C6B43;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.post-purchase-error {
+  margin: 0 26px 18px;
+  padding: 12px 14px;
+  border: 1px solid #D77E74;
+  border-radius: 10px;
+  background: #FFF4F2;
+  color: #7D2D25;
+  font-weight: 700;
+}
+
+.post-purchase-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 26px 24px;
+  border-top: 1px solid var(--border);
+  background: #F8F5EE;
+}
+
+.post-purchase-footer p {
+  margin: 0;
+  max-width: 520px;
+  font-size: .9rem;
+}
+
+.post-purchase-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 760px) {
+  .post-purchase-heading,
+  .post-purchase-invite,
+  .post-purchase-questions,
+  .post-purchase-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .post-purchase-invite-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-purchase-footer {
+    display: grid;
+  }
+
+  .post-purchase-footer-actions {
+    justify-content: flex-start;
+  }
+
+  .post-purchase-choice-actions {
+    align-items: stretch;
+  }
+
+  .post-purchase-choice {
+    width: 100%;
+  }
+}
+
+/* v14: move customers straight from a completed Tito order into our own
+   confirmation and follow-up journey. */
+.wfd-finished-tito-hidden {
+  display: none !important;
+}
+
+.post-purchase-success {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 22px 26px;
+  background: #EEF5E8;
+  border-bottom: 1px solid #C7D6B7;
+}
+
+.post-purchase-success-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #5C6B43;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.post-purchase-success h3 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.post-purchase-success p {
+  color: #4F5A43;
+}
+
+.post-purchase-success .kicker {
+  margin-bottom: 6px;
+  color: #52633D;
+}
+
+@media (max-width: 650px) {
+  .post-purchase-success {
+    grid-template-columns: 1fr;
+    padding: 18px 16px;
+  }
+}
+
+/* v15: simplify Tito's checkout chrome and make our post-purchase continuation
+   feel like the next part of the same modal sequence. */
+.tito-overlay .tito-registration .tito-registration-progress {
+  display: none !important;
+}
+
+/* Keep the selector compact, but give the quantity buttons breathing room so
+   they do not crowd or overlap the number field. */
+#tito-mount .tito-widget-form .tito-release .tito-quantity {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+#tito-mount .tito-release--decrement-quantity,
+#tito-mount .tito-release--increment-quantity {
+  margin: 0 !important;
+  padding: 0 !important;
+  position: static !important;
+}
+
+#tito-mount .tito-release--quantity-input,
+#tito-mount input[type="number"] {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  padding: 2px 5px !important;
+  text-align: center !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a,
+#tito-mount a.tito-release--decrement-quantity--link,
+#tito-mount .wfd-quantity-minus,
+#tito-mount .tito-release--increment-quantity > a,
+#tito-mount a.tito-release--increment-quantity--link,
+#tito-mount .wfd-quantity-plus {
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 20px !important;
+  margin: 0 !important;
+}
+
+#tito-mount .tito-release--decrement-quantity > a::after,
+#tito-mount a.tito-release--decrement-quantity--link::after,
+#tito-mount .wfd-quantity-minus::after,
+#tito-mount .tito-release--increment-quantity > a::after,
+#tito-mount a.tito-release--increment-quantity--link::after,
+#tito-mount .wfd-quantity-plus::after {
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+body.wfd-post-purchase-modal-open {
+  overflow: hidden;
+}
+
+.wfd-post-purchase-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  overflow-y: auto;
+  padding: 24px 14px;
+  background: rgba(0,0,0,.68);
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+.wfd-post-purchase-modal {
+  width: min(660px, 100%);
+  margin: 14px auto 32px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(0,0,0,.38);
+}
+
+.wfd-post-purchase-modal::before {
+  content: "Wotton-under-Edge Firework Display 2026";
+  display: block;
+  padding: 10px 16px;
+  border-bottom: 1px solid #d7d7d7;
+  background: #ececec;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-card {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-success {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-heading {
+  padding-top: 20px;
+  padding-bottom: 18px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-invite,
+.wfd-post-purchase-modal-content .post-purchase-questions {
+  padding-top: 20px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-card {
+  padding: 15px 16px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  box-shadow: 0 -8px 18px rgba(0,0,0,.04);
+}
+
+/* Once our continuation modal is visible, Tito's completed-order overlay is
+   deliberately hidden underneath. Its checkout form is never hidden before the
+   order is finished. */
+.tito-overlay.wfd-finished-tito-hidden {
+  display: none !important;
+}
+
+@media (max-width: 650px) {
+  .wfd-post-purchase-overlay {
+    padding: 0;
+  }
+
+  .wfd-post-purchase-modal {
+    min-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .wfd-post-purchase-modal::before {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+}
+
+
+/* v17: make the post-purchase continuation a little smaller and turn the
+   Round Table invitation into one clear decision rather than two event cards. */
+.wfd-post-purchase-modal-content .post-purchase-success {
+  padding: 16px 20px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-success-mark {
+  width: 36px;
+  height: 36px;
+  font-size: 1.15rem;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-success h3 {
+  font-size: clamp(1.28rem, 2.6vw, 1.7rem);
+}
+
+.wfd-post-purchase-modal-content .post-purchase-heading {
+  padding: 16px 20px 14px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-invite {
+  padding: 16px 20px 18px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-questions {
+  padding: 16px 20px 6px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-card {
+  padding: 13px 14px;
+  margin-bottom: 9px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-card p {
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.post-purchase-invite-prompt .post-purchase-choice-card {
+  margin-bottom: 0;
+  border-color: #E2BE6C;
+  background: rgba(255,255,255,.8);
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice-actions {
+  margin-top: 10px;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-choice {
+  min-height: 36px;
+  padding: .5rem .78rem;
+  font-size: .84rem;
+}
+
+.wfd-post-purchase-modal-content .post-purchase-footer {
+  padding: 12px 20px;
+}
+
+@media (max-width: 650px) {
+  .wfd-post-purchase-modal-content .post-purchase-success,
+  .wfd-post-purchase-modal-content .post-purchase-heading,
+  .wfd-post-purchase-modal-content .post-purchase-invite,
+  .wfd-post-purchase-modal-content .post-purchase-questions,
+  .wfd-post-purchase-modal-content .post-purchase-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

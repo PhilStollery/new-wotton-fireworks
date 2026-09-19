@@ -1,2 +1,33 @@
 # Redirect default Netlify subdomain to primary domain
 https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 301!
+
+# Stable public routes
+/visit /#visit 302
+/tickets /#tickets 302
+/terms /terms.html 200
+/privacy /privacy.html 200
+
+# Netlify function routes used by the public site/testing
+# ticket-availability and post-purchase-preference now declare their /api paths
+# in the function config so Netlify can apply caching/rate-limiting correctly.
+/api/integration-health /.netlify/functions/integration-health 200
+
+# Friendly source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
+/go/bluecoat /index.html 200
+/go/british /index.html 200
+/go/charfield /index.html 200
+/go/kingswood /index.html 200
+/go/north-nibley /index.html 200
+/go/nibley /index.html 200
+/go/hockey /index.html 200
+/go/rovers /index.html 200
+/go/rugby /index.html 200
+
+# Other source tracks are retained for marketing analytics, but do not show a beneficiary message.
+/go/klb /index.html 200
+/go/wd /index.html 200
+/go/gate /index.html 200
+/go/poster /index.html 200
+/go/flyer /index.html 200
+/go/facebook /index.html 200
+/go/facebook-launch /index.html 200

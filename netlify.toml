@@ -1,3 +1,13 @@
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Reconcile paid price bands every 10 minutes on the published production deploy.
+# The function remains inert until priceAutomationEnabled is set to true in
+# netlify/functions/_lib/integration-config-2026.mjs.
+[functions."tito-reconcile"]
+  schedule = "*/10 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

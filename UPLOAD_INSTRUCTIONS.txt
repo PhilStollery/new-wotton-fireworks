@@ -1,0 +1,58 @@
+Wotton Fireworks 2026 Tito integration package v25
+===================================================
+
+V25 IS CUMULATIVE OVER V24
+--------------------------
+Upload the package contents over the 2026 branch, preserving the paths shown.
+
+FILES TO ADD / REPLACE
+----------------------
+Replace:
+  /js/event-data-2026.js
+  /netlify/functions/ticket-availability.mjs
+  /netlify/functions/_lib/config.mjs
+  /netlify/functions/_lib/tito.mjs
+  /netlify/functions/post-purchase-preference.mjs
+  /terms.html
+  /_redirects
+  /README.md
+  /VERSION.txt
+
+Add/replace:
+  /docs/integration-v25.md
+
+Delete if present:
+  /docs/integration-v24.md
+
+DO NOT REPLACE
+--------------
+Do not overwrite /netlify/functions/_lib/integration-config-2026.mjs. Existing Tito IDs/slugs entered there must remain intact.
+
+TITO ACTIVITY MODEL EXPECTED BY V25
+-----------------------------------
+# Event Capacity          3,500 overall admissions
+# Parking Capacity          150 all parking tickets
+Release 1 - Super Saver     300
+Release 2 - Advance         700
+Release 3 - Standard        unlimited at release level
+
+All admission types that count toward attendance, including comps/pre-school where appropriate, should also count against # Event Capacity. Standard therefore uses remaining Event Capacity rather than a fixed 2,500 website cap.
+
+QUICK TEST
+----------
+1. Confirm the What's On chips are readable (dark text on bright yellow) and programme times/body copy have adequate contrast.
+2. Confirm the Prices table shows Pre-school first, then Primary / Secondary & Sixth Form / Adult across Super Saver / Advance / Standard.
+3. Confirm the separate Parking tickets table has only Ticket + Price columns and its Price header says “150 spaces until sold out or 7.30pm Saturday 7th November”.
+4. Confirm Step 2 choice buttons sit at the bottom of all three travel cards.
+5. Confirm Step 3 and the Tito selector are dark.
+6. Confirm each ticket retains its visible ticket name.
+7. Confirm the - / quantity / + controls form one right-aligned cluster.
+8. Set Super Saver to its available limit and add one more of a ticket type. Confirm the extra ticket appears in the matching Advance type without leaving Super Saver above its limit. Repeat Advance -> Standard.
+9. Confirm after automatic correction Tito's Continue button becomes usable when the selection is valid.
+10. Confirm Standard availability follows remaining # Event Capacity. Issue/hold a comp or pre-school test admission and verify Standard remaining falls accordingly.
+11. Confirm paid + Blue Badge parking share one 150-space counter.
+12. Confirm “A valid Blue Badge must be displayed in the vehicle.” is within the Blue Badge ticket description.
+13. Confirm no rendered ticket description says under-16s must be accompanied.
+14. Complete a test checkout and confirm the post-purchase Tito email reminder still appears.
+
+No new Netlify environment variables are required.

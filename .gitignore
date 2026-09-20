@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.netlify/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+*.log
+.DS_Store
+Thumbs.db

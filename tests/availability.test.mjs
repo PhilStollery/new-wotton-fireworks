@@ -36,3 +36,55 @@ test('upstream failures are backed off and stale responses are explicit',async()
 test('availability rejects write methods',async()=>scenario({},async(handler,calls)=>{
   assert.equal((await handler(new Request('https://test/api/ticket-availability',{method:'POST'}))).status,405);assert.equal(calls(),0);
 }));
+
+test('live availability uses one Activities request and one Releases request',async()=>{
+  const original=global.fetch;
+  const oldLiveToken=process.env.TITO_API_TOKEN_LIVE;
+  const oldContext=process.env.CONTEXT;
+  process.env.TITO_API_TOKEN_LIVE='mock-live';
+  process.env.CONTEXT='production';
+  const fixture=upstream();
+  let calls=0;
+  global.fetch=async(url)=>{
+    calls++;
+    const value=String(url);
+    if(value.includes('/releases?'))return Response.json({releases:fixture.releases});
+    if(value.includes('/activities?'))return Response.json({activities:fixture.activities});
+    throw new Error(`Unexpected Tito request: ${value}`);
+  };
+  try{
+    const {buildLiveAvailability}=await import(`../netlify/functions/ticket-availability.mjs?live-call-count=${++version}`);
+    const config={
+      isProduction:true,
+      manifest:{
+        timezone:'Europe/London',
+        salesOpenLocal:'2026-01-01T00:00:00',
+        superSaverCutoffLocal:'2099-01-01T00:00:00',
+        advanceCutoffLocal:'2099-02-01T00:00:00',
+        admissionCloseLocal:'2099-03-01T00:00:00',
+        eventCapacity:3500,
+        parkingCapacity:150
+      },
+      tito:{
+        accountSlug:'wotton-firework-display',
+        eventSlug:'2026',
+        activities:{eventCapacity:'1',superSaver:'2',advance:'3',parkingCapacity:'4'},
+        releases:{
+          superSaver:['super-adult'],
+          advance:['advance-adult'],
+          standard:['standard-adult'],
+          preschool:'preschool',
+          paidParking:'parking',
+          blueBadgeParking:'blue-badge'
+        }
+      }
+    };
+    const data=await buildLiveAvailability(config);
+    assert.equal(data.ok,true);
+    assert.equal(calls,2);
+  }finally{
+    global.fetch=original;
+    if(oldLiveToken===undefined)delete process.env.TITO_API_TOKEN_LIVE;else process.env.TITO_API_TOKEN_LIVE=oldLiveToken;
+    if(oldContext===undefined)delete process.env.CONTEXT;else process.env.CONTEXT=oldContext;
+  }
+});

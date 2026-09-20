@@ -695,7 +695,8 @@
       localStorage.setItem(POST_PURCHASE_STORAGE_KEY, JSON.stringify({
         ...snapshot,
         savedAt: Number(snapshot.savedAt || Date.now()),
-        answers: { ...postPurchaseAnswers }
+        answers: { ...postPurchaseAnswers },
+        saveStates: { ...postPurchaseSaveStates }
       }));
     } catch {
       // The immediate post-checkout journey still works without localStorage.
@@ -711,6 +712,14 @@
         return null;
       }
       postPurchaseAnswers = stored.answers && typeof stored.answers === 'object' ? { ...stored.answers } : {};
+      postPurchaseSaveStates = stored.saveStates && typeof stored.saveStates === 'object' && !Array.isArray(stored.saveStates)
+        ? { ...stored.saveStates }
+        : {};
+      // A request that was still in flight when the page closed is not proven
+      // saved. Preserve the user's answer but make the UI truthfully offer retry.
+      Object.keys(postPurchaseSaveStates).forEach((stage) => {
+        if (postPurchaseSaveStates[stage] === 'saving') postPurchaseSaveStates[stage] = 'error';
+      });
       return stored;
     } catch {
       return null;
@@ -786,6 +795,7 @@
           updatePostPurchaseChoiceUi(stage);
         }
       });
+      rememberPostPurchase(postPurchaseRegistration);
       postPurchaseError = '';
     } catch (error) {
       Object.entries(batch).forEach(([stage, value]) => {
@@ -796,6 +806,7 @@
           postPurchasePendingAnswers[stage] = postPurchaseAnswers[stage];
         }
       });
+      rememberPostPurchase(postPurchaseRegistration);
       postPurchaseError = error.message || 'We could not save one or more choices. Please try again.';
     } finally {
       postPurchaseSaveInFlight = false;

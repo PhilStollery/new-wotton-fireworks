@@ -12,18 +12,21 @@ function data(remaining=3) {
 }
 async function setup({main=false,failure=false,pending=false}={}) {
   const dom=new JSDOM(html,{url:'https://example.test/go/kingswood',runScripts:'outside-only',pretendToBeVisual:true});
-  const w=dom.window; const frames=[]; const timers=[]; const writes=[];let calls=0;let payload=data();
+  const w=dom.window; const frames=[]; const timers=[]; const writes=[];let calls=0;let payload=data();let postFailure=false;
   w.HTMLElement.prototype.scrollIntoView=function(){};
-  if(pending)w.localStorage.setItem('wfdPendingPostPurchase2026',JSON.stringify({slug:'mock-booking',reference:'mock-proof',savedAt:Date.now()}));
+  if(pending){
+    const record=pending===true?{slug:'mock-booking',reference:'mock-proof',savedAt:Date.now()}:pending;
+    w.localStorage.setItem('wfdPendingPostPurchase2026',JSON.stringify(record));
+  }
   w.CSS={escape:s=>s};w.matchMedia=()=>({matches:false});w.AbortSignal=AbortSignal;
   w.requestAnimationFrame=fn=>{frames.push(fn);return frames.length;};
   w.setTimeout=(fn,delay)=>{timers.push({fn,delay});return timers.length;};w.clearTimeout=id=>{if(timers[id-1])timers[id-1].cancelled=true;};
-  w.fetch=async(url,init)=>{calls++;if(failure)throw Error('offline');if(String(url).includes('post-purchase')){writes.push(JSON.parse(init.body));return Response.json({ok:true});}return Response.json(payload);};
+  w.fetch=async(url,init)=>{calls++;if(failure)throw Error('offline');if(String(url).includes('post-purchase')){if(postFailure)throw Error('save offline');writes.push(JSON.parse(init.body));return Response.json({ok:true});}return Response.json(payload);};
   w.eval(eventCode);if(main)w.eval(mainCode);
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   const settle=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));let n=0;while(frames.length&&n++<30){frames.shift()();await Promise.resolve();}assert.ok(n<30,'presentation must settle without a render loop');};
   if(!main)await w.fetch('/api/ticket-availability');await settle();
-  return {w,dom,timers,frames,writes,settle,calls:()=>calls,setPayload:p=>payload=p,clearFailure:()=>failure=false};
+  return {w,dom,timers,frames,writes,settle,calls:()=>calls,setPayload:p=>payload=p,clearFailure:()=>failure=false,setPostFailure:v=>postFailure=Boolean(v)};
 }
 test('initial failure retries; page structure, FAQ, and attribution remain usable',async()=>{
   const t=await setup({main:true,failure:true});try{
@@ -125,4 +128,59 @@ test('successful polling uses 30 seconds and pauses while hidden',async()=>{
     t.w.document.dispatchEvent(new t.w.Event('visibilitychange'));
     assert.ok(!t.timers.some(x=>x.delay===30000&&!x.cancelled));
   }finally{t.dom.window.close();}
+});
+
+test('Tito custom validity is preserved by presentation corrections',async()=>{
+  const t=await setup();try{
+    rows(t);
+    const input=t.w.document.querySelector('[data-wfd-release="advance"] input');
+    input.setCustomValidity('Provider validation');
+    input.dispatchEvent(new t.w.Event('change',{bubbles:true}));
+    await t.settle();
+    assert.equal(input.validationMessage,'Provider validation');
+  }finally{t.dom.window.close();}
+});
+test('form submission cannot bypass an unacknowledged correction',async()=>{
+  const t=await setup();try{
+    const payload=data(500);
+    payload.waves[0].remaining=300;
+    payload.waves[0].displayRemaining=300;
+    payload.admissionCapacity.remaining=500;
+    t.setPayload(payload);
+    await t.w.fetch('/api/ticket-availability');
+    await t.settle();
+    rows(t);
+    const mount=t.w.document.querySelector('#tito-mount');
+    mount.insertAdjacentHTML('beforeend','<form class="tito-widget-form"><button type="submit">Continue</button></form>');
+    const input=t.w.document.querySelector('[data-wfd-release="super"] input');
+    input.max='100';input.value='290';
+    input.dispatchEvent(new t.w.Event('input',{bubbles:true}));
+    await t.settle();
+    const warning=t.w.document.querySelector('.wfd-capacity-message[data-requires-acknowledgement="true"]');
+    assert.ok(warning);
+    const form=mount.querySelector('form');
+    const blocked=new t.w.Event('submit',{bubbles:true,cancelable:true});
+    assert.equal(form.dispatchEvent(blocked),false);
+    warning.querySelector('button').click();
+    await t.settle();
+    const allowed=new t.w.Event('submit',{bubbles:true,cancelable:true});
+    assert.equal(form.dispatchEvent(allowed),true);
+  }finally{t.dom.window.close();}
+});
+test('failed post-purchase save remains Not saved after reload',async()=>{
+  let stored;
+  const first=await setup({main:true,pending:true});try{
+    first.setPostFailure(true);
+    first.w.document.querySelector('[data-post-choice][data-stage="next_year"][data-value="no"]').click();
+    const timer=first.timers.find(x=>x.delay===160&&!x.cancelled);
+    assert.ok(timer);
+    timer.fn();
+    await first.settle();
+    assert.match(first.w.document.querySelector('[data-post-save-state="next_year"]').textContent,/Not saved/);
+    stored=JSON.parse(first.w.localStorage.getItem('wfdPendingPostPurchase2026'));
+    assert.equal(stored.saveStates.next_year,'error');
+  }finally{first.dom.window.close();}
+  const second=await setup({main:true,pending:stored});try{
+    assert.match(second.w.document.querySelector('[data-post-save-state="next_year"]').textContent,/Not saved/);
+  }finally{second.dom.window.close();}
 });

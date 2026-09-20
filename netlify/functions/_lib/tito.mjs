@@ -87,8 +87,8 @@ export async function getRelease(slug) {
   return body?.release;
 }
 
-export async function patchRelease(slug, changes) {
-  const current = await getRelease(slug);
+export async function patchRelease(slug, changes, currentRelease = null) {
+  const current = currentRelease || await getRelease(slug);
   if (!current) throw new HttpError(404, `Release not found: ${slug}`);
   const body = await titoRequest(`${eventBase()}/releases/${encodeURIComponent(slug)}`, {
     method: "PATCH",

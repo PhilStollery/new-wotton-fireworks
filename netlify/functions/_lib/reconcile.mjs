@@ -12,7 +12,7 @@ async function closeRelease(slug, nowIso) {
   if (release.state_name !== "off_sale" && release.state !== "off_sale" && release.state !== 404) changes.state = "off_sale";
   if (!release.end_at || DateTime.fromISO(release.end_at) > DateTime.fromISO(nowIso)) changes.end_at = nowIso;
   if (!Object.keys(changes).length) return { slug, changed: false };
-  await patchRelease(slug, changes);
+  await patchRelease(slug, changes, release);
   return { slug, changed: true, changes };
 }
 
@@ -22,7 +22,7 @@ async function openRelease(slug, nowIso) {
   if (release.state_name !== "on_sale" && release.state !== "on_sale" && release.state !== 100) changes.state = "on_sale";
   if (release.start_at && DateTime.fromISO(release.start_at) > DateTime.fromISO(nowIso)) changes.start_at = nowIso;
   if (!Object.keys(changes).length) return { slug, changed: false };
-  await patchRelease(slug, changes);
+  await patchRelease(slug, changes, release);
   return { slug, changed: true, changes };
 }
 

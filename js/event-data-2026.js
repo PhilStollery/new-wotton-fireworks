@@ -785,7 +785,6 @@ window.FIREWORKS_EVENT = {
     const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
     if(setter) setter.call(control,valueText); else control.value=valueText;
     if(next===0 && Number(control.getAttribute('min'))>0) control.setAttribute('min','0');
-    control.setCustomValidity?.('');
   }
   function notifyControl(control,value,{flash=true,nativeEventInFlight=false}={}){
     if(!control)return; setControl(control,value);
@@ -821,7 +820,6 @@ window.FIREWORKS_EVENT = {
   function normaliseQuantityValidity(){
     document.querySelectorAll('#tito-mount .wfd-release-row input[type="number"]').forEach((control)=>{
       if(numericValue(control)===0 && Number(control.getAttribute('min'))>0) control.setAttribute('min','0');
-      control.setCustomValidity?.('');
     });
   }
 
@@ -969,6 +967,18 @@ window.FIREWORKS_EVENT = {
       } else if(row.dataset.wfdGroup==='preschool'){
         const eventLeft=eventRemaining(); if(eventLeft!=null&&totalAdmissionSelected()>=eventLeft){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();statusMessage('No further admission tickets are available within the remaining event capacity.');}
       }
+    },true);
+    document.addEventListener('submit',(event)=>{
+      const mount=document.getElementById('tito-mount');
+      if(!mount||!mount.contains(event.target))return;
+      const pending=activeAcknowledgementMessages();
+      if(pending.length){
+        event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();
+        pending[0].querySelector('.wfd-capacity-message-ack')?.focus();
+        syncCheckoutAcknowledgementState();
+        return;
+      }
+      normaliseQuantityValidity();
     },true);
     const onControl=(event)=>{
       if(autoAdjusting){schedulePatch();return;}

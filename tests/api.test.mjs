@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import preference from '../netlify/functions/post-purchase-preference.mjs';
 import { readJson } from '../netlify/functions/_lib/http.mjs';
+import { patchRelease } from '../netlify/functions/_lib/tito.mjs';
 
 const request = (body, headers = {}) => new Request('https://example.test/api/post-purchase-preference', {
   method: 'POST', headers: {'content-type':'application/json', ...headers}, body: JSON.stringify(body)
@@ -32,4 +33,26 @@ test('only matching proof can write allowed metadata; unrelated metadata preserv
     assert.equal(writes.length,1); assert.equal(writes[0].registration.metadata.existing,'retained');
     assert.equal(writes[0].registration.metadata.wfd_responses.next_year.value,'no');
   } finally {global.fetch=original;delete process.env.TITO_API_TOKEN_TEST;}
+});
+
+test('patchRelease reuses a supplied release without an extra Tito GET',async()=>{
+  const original=global.fetch;
+  const oldToken=process.env.TITO_API_TOKEN_TEST;
+  const oldContext=process.env.CONTEXT;
+  process.env.TITO_API_TOKEN_TEST='test-only';
+  process.env.CONTEXT='deploy-preview';
+  const calls=[];
+  global.fetch=async(url,init={})=>{
+    calls.push({url:String(url),method:init.method||'GET'});
+    return Response.json({release:{slug:'example',title:'Example'}});
+  };
+  try{
+    await patchRelease('example',{state:'off_sale'},{slug:'example',title:'Example'});
+    assert.equal(calls.length,1);
+    assert.equal(calls[0].method,'PATCH');
+  }finally{
+    global.fetch=original;
+    if(oldToken===undefined)delete process.env.TITO_API_TOKEN_TEST;else process.env.TITO_API_TOKEN_TEST=oldToken;
+    if(oldContext===undefined)delete process.env.CONTEXT;else process.env.CONTEXT=oldContext;
+  }
 });

@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { getConfig } from "./_lib/config.mjs";
-import { getActivity, getActivities, getReleases } from "./_lib/tito.mjs";
+import { getActivities, getReleases } from "./_lib/tito.mjs";
 import { HttpError, json, toErrorResponse } from "./_lib/http.mjs";
 
 const CACHE_TTL_MS = 10_000;
@@ -23,6 +23,13 @@ function activityId(value) {
   if (value == null) return "";
   if (typeof value === "object") return String(value.id ?? value.activity_id ?? value.activityId ?? value.slug ?? "");
   return String(value);
+}
+
+function configuredActivity(activities, id, label) {
+  const wanted = String(id || "");
+  const activity = (activities || []).find((candidate) => activityId(candidate) === wanted);
+  if (!activity) throw new HttpError(503, `Configured Tito Activity was not returned: ${label}`);
+  return activity;
 }
 
 function releaseActivityIds(release) {
@@ -544,17 +551,17 @@ function requireLiveConfiguration(config) {
   if (missing.length) throw new HttpError(503, `Live Tito configuration is incomplete: ${missing.join(", ")}`);
 }
 
-async function buildLiveAvailability(config) {
+export async function buildLiveAvailability(config) {
   requireLiveConfiguration(config);
 
-  const [eventActivity, superSaverActivity, advanceActivity, parkingActivity, rawReleases, activities] = await Promise.all([
-    getActivity(config.tito.activities.eventCapacity),
-    getActivity(config.tito.activities.superSaver),
-    getActivity(config.tito.activities.advance),
-    getActivity(config.tito.activities.parkingCapacity),
-    getReleases(),
-    getActivities()
-  ]);
+  // The Activities collection already contains the capacity/allocation fields
+  // used below. Fetch it once instead of making four additional per-Activity
+  // requests on every uncached availability refresh.
+  const [rawReleases, activities] = await Promise.all([getReleases(), getActivities()]);
+  const eventActivity = configuredActivity(activities, config.tito.activities.eventCapacity, "event capacity");
+  const superSaverActivity = configuredActivity(activities, config.tito.activities.superSaver, "Super Saver");
+  const advanceActivity = configuredActivity(activities, config.tito.activities.advance, "Advance");
+  const parkingActivity = configuredActivity(activities, config.tito.activities.parkingCapacity, "parking capacity");
   const allReleaseDetails = uniqueReleaseDetails(rawReleases);
 
   const zone = config.manifest.timezone;
@@ -567,7 +574,6 @@ async function buildLiveAvailability(config) {
   const superSaverDetails = pickReleaseDetails(config.tito.releases.superSaver, superSaverActivity, allReleaseDetails);
   const advanceDetails = pickReleaseDetails(config.tito.releases.advance, advanceActivity, allReleaseDetails);
   const standardDetails = configuredDetails(config.tito.releases.standard, allReleaseDetails);
-  const standardActivity = findLinkedActivity(standardDetails, activities, { patterns: [/release\s*3/, /\bstandard\b/] }, false);
 
   const superSaver = activitySummary(
     { key: "super-saver", label: "Super Saver", kind: "admission", counterMode: "capacity" },

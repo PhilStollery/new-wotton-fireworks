@@ -10,7 +10,7 @@ export const MANIFEST_2026 = Object.freeze({
   blueBadgeReserve: 30,
   superSaverCapacity: 300,
   advanceCapacity: 700,
-  salesOpenLocal: "2026-09-21T17:00:00",
+  salesOpenLocal: "2026-09-20T00:00:00",
   superSaverCutoffLocal: "2026-10-05T17:00:00",
   advanceCutoffLocal: "2026-10-26T17:00:00",
   admissionCloseLocal: "2026-11-07T19:30:00"

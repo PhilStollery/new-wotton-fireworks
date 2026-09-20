@@ -116,8 +116,16 @@ window.FIREWORKS_EVENT = {
       a: "Your booking confirmation contains all the tickets and QR codes for your group in one email, so there is no need to assign each ticket to a different person or send everyone a separate email. Each ticket has its own QR code, which also means members of the group can arrive separately if necessary."
     },
     {
+      q: "Why have I received an email from Tito?",
+      a: "Tito is our ticketing provider, so your booking confirmation and ticket emails will come from Tito. Links in those emails may also take you to the Tito website to view your booking or tickets. That is expected and is part of the booking system we use for the event."
+    },
+    {
       q: "Is parking included with admission?",
       a: "Parking is booked separately from admission at £10 per vehicle. If you need to drive, add parking when you book your admission tickets; the number of spaces is limited by the site."
+    },
+    {
+      q: "What should I do when I arrive by car?",
+      a: "Have your ticket ready to show at the road closure. You will then be directed on to the car park entrance; please follow the marshals' directions from there. If you are using Blue Badge parking, show your Blue Badge to the marshals when you enter the car park."
     },
     {
       q: "Can I park on Wotton Road?",

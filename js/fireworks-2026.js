@@ -64,7 +64,7 @@
       beneficiary: 'Wotton Rugby Football Club',
       metadata: { source_route: 'rugby', utm_source: 'wotton_rugby', utm_medium: 'qr', utm_campaign: 'fireworks_2026' }
     },
-    klb: { source: 'KLB', metadata: { source_route: 'klb', utm_source: 'klb_friends', utm_medium: 'qr', utm_campaign: 'fireworks_2026' } },
+    klb: { source: 'KLB', beneficiary: 'KLB Friends', metadata: { source_route: 'klb', utm_source: 'klb_friends', utm_medium: 'qr', utm_campaign: 'fireworks_2026' } },
     wd: { source: 'WD', metadata: { source_route: 'wd', utm_source: 'wotton_directory', utm_medium: 'qr', utm_campaign: 'fireworks_2026' } },
     gate: { source: 'Gate', metadata: { source_route: 'gate', utm_source: 'gate', utm_medium: 'assisted_online', utm_campaign: 'fireworks_2026' } },
     poster: { source: 'Direct', metadata: { source_route: 'poster', utm_source: 'poster', utm_medium: 'qr', utm_campaign: 'fireworks_2026', utm_content: 'general' } },

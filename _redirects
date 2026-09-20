@@ -12,7 +12,7 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 # in the function config so Netlify can apply caching/rate-limiting correctly.
 /api/integration-health /.netlify/functions/integration-health 200
 
-# Friendly source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
+# Friendly beneficiary source-tracking routes. These are rewrites, so the clean /go/... URL stays visible.
 /go/bluecoat /index.html 200
 /go/british /index.html 200
 /go/charfield /index.html 200
@@ -22,9 +22,9 @@ https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 30
 /go/hockey /index.html 200
 /go/rovers /index.html 200
 /go/rugby /index.html 200
-
-# Other source tracks are retained for marketing analytics, but do not show a beneficiary message.
 /go/klb /index.html 200
+
+# Other source tracks are retained for marketing analytics/publicity, but do not show a beneficiary message.
 /go/wd /index.html 200
 /go/gate /index.html 200
 /go/poster /index.html 200

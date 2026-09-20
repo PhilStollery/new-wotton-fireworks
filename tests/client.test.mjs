@@ -10,8 +10,8 @@ function data(remaining=3) {
   const waves=[group('super-saver','Super Saver','admission',['super'],3),group('advance','Advance','admission',['advance'],7),group('standard','Standard','admission',['standard'],remaining)];
   return {ok:true,testMode:true,event:'test/test',waves,currentWave:waves[0],admissionCapacity:{remaining},parkingGroups:[group('preschool','Pre-school','standalone',['preschool'],remaining),group('parking','Parking','parking',['parking','blue'],2)]};
 }
-async function setup({main=false,failure=false,pending=false}={}) {
-  const dom=new JSDOM(html,{url:'https://example.test/go/kingswood',runScripts:'outside-only',pretendToBeVisual:true});
+async function setup({main=false,failure=false,pending=false,url='https://example.test/go/kingswood'}={}) {
+  const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true});
   const w=dom.window; const frames=[]; const timers=[]; const writes=[];let calls=0;let payload=data();let postFailure=false;
   w.HTMLElement.prototype.scrollIntoView=function(){};
   if(pending){
@@ -37,6 +37,19 @@ test('initial failure retries; page structure, FAQ, and attribution remain usabl
     t.clearFailure();await retry.fn();await t.settle();
     assert.ok(t.w.document.querySelector('tito-widget'));
     assert.equal(t.w.document.querySelector('tito-widget').getAttribute('source'),'Kingswood');
+  }finally{t.dom.window.close();}
+});
+test('KLB route credits KLB Friends while preserving the KLB Tito source',async()=>{
+  const t=await setup({main:true,url:'https://example.test/go/klb'});try{
+    const support=t.w.document.querySelector('#source-support');
+    assert.equal(support.hidden,false);
+    assert.match(support.textContent,/KLB Friends/);
+    const widget=t.w.document.querySelector('tito-widget');
+    assert.ok(widget);
+    assert.equal(widget.getAttribute('source'),'KLB');
+    const prefill=JSON.parse(widget.getAttribute('prefill'));
+    assert.equal(prefill.metadata.source_route,'klb');
+    assert.equal(prefill.metadata.utm_source,'klb_friends');
   }finally{t.dom.window.close();}
 });
 function rows(t){

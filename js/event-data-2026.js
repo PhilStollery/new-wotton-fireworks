@@ -191,6 +191,7 @@ window.FIREWORKS_EVENT = {
   let patchScheduled = false;
   let postPurchaseWriteSeen = false;
   let travelAutosaveTimer = null;
+  let pendingTravelFallback = null;
   let observer = null;
   let pageStructureReady = false;
   let travelEventsInstalled = false;
@@ -1030,17 +1031,28 @@ window.FIREWORKS_EVENT = {
       response.clone().json().then((payload)=>{if(payload?.ok){latestAvailability=payload;window.dispatchEvent(new CustomEvent('wfd:v25-availability',{detail:payload}));schedulePatch();}}).catch(()=>{});return response;
     }
     if(typeof input==='string'&&input==='/api/post-purchase-preference'&&init?.body){
-      postPurchaseWriteSeen=true;if(travelAutosaveTimer){window.clearTimeout(travelAutosaveTimer);travelAutosaveTimer=null;}
+      postPurchaseWriteSeen=true;pendingTravelFallback=null;if(travelAutosaveTimer){window.clearTimeout(travelAutosaveTimer);travelAutosaveTimer=null;}
       try{const body=JSON.parse(init.body);const travel=readTravel();if(travel){body.answers=body.answers&&typeof body.answers==='object'?body.answers:{};if(!body.answers.travel)body.answers.travel=travel;return nativeFetch(input,{...init,body:JSON.stringify(body)});}}catch{/* leave request unchanged */}
     }
     return nativeFetch(input,init);
   };
 
+  function flushTravelFallback(){
+    if(postPurchaseWriteSeen||!pendingTravelFallback)return;
+    const pending=pendingTravelFallback;pendingTravelFallback=null;
+    if(travelAutosaveTimer){window.clearTimeout(travelAutosaveTimer);travelAutosaveTimer=null;}
+    postPurchaseWriteSeen=true;
+    nativeFetch('/api/post-purchase-preference',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},keepalive:true,body:JSON.stringify(pending)})
+      .catch(()=>{postPurchaseWriteSeen=false;pendingTravelFallback=pending;});
+  }
+
   window.addEventListener('wfd:registration-finished',(event)=>{
-    const registration=event.detail||{};const travel=readTravel();const registrationSlug=String(registration.slug||'');const reference=String(registration.reference||'');postPurchaseWriteSeen=false;
+    const registration=event.detail||{};const travel=readTravel();const registrationSlug=String(registration.slug||'');const reference=String(registration.reference||'');postPurchaseWriteSeen=false;pendingTravelFallback=null;
     if(travelAutosaveTimer)window.clearTimeout(travelAutosaveTimer);if(!travel||!registrationSlug||!reference)return;
-    travelAutosaveTimer=window.setTimeout(()=>{travelAutosaveTimer=null;if(postPurchaseWriteSeen)return;postPurchaseWriteSeen=true;nativeFetch('/api/post-purchase-preference',{method:'POST',headers:{'content-type':'application/json',accept:'application/json'},keepalive:true,body:JSON.stringify({registrationSlug,reference,answers:{travel}})}).catch(()=>{});},4000);
+    pendingTravelFallback={registrationSlug,reference,answers:{travel}};
+    travelAutosaveTimer=window.setTimeout(()=>{travelAutosaveTimer=null;flushTravelFallback();},120000);
   });
+  window.addEventListener('pagehide',()=>{queueMicrotask(flushTravelFallback);});
 
   window.addEventListener('wfd:v25-availability',schedulePatch);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')schedulePatch();});
 

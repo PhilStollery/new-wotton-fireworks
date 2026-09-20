@@ -10,6 +10,12 @@
   const POST_PURCHASE_API = '/api/post-purchase-preference';
   const POST_PURCHASE_STORAGE_KEY = 'wfdPendingPostPurchase2026';
   const POST_PURCHASE_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
+  const POST_PURCHASE_STAGES = Object.freeze([
+    'round_table_invite',
+    'cancellation',
+    'next_year',
+    'other_events'
+  ]);
 
 
   const sourceTracks = {
@@ -642,10 +648,6 @@
     const selected = postPurchaseAnswers[stage] || '';
     const positiveSelected = selected === positiveValue;
     const negativeSelected = selected === negativeValue;
-    const saveState = postPurchaseSaveStates[stage] || (selected ? 'saved' : '');
-    const statusText = saveState === 'saving' ? 'Saving…'
-      : saveState === 'error' ? 'Not saved'
-      : selected ? 'Saved' : '';
 
     return `
       <section class="post-purchase-choice-card" data-post-stage="${stage}">
@@ -654,7 +656,6 @@
         <div class="post-purchase-choice-actions">
           <button type="button" class="post-purchase-choice${positiveSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${positiveValue}" aria-pressed="${positiveSelected ? 'true' : 'false'}">${positiveLabel}</button>
           <button type="button" class="post-purchase-choice post-purchase-choice-secondary${negativeSelected ? ' is-selected' : ''}" data-post-choice data-stage="${stage}" data-value="${negativeValue}" aria-pressed="${negativeSelected ? 'true' : 'false'}">${negativeLabel}</button>
-          <span class="post-purchase-saved" data-post-save-state="${stage}" aria-live="polite">${statusText}</span>
         </div>
       </section>
     `;
@@ -731,6 +732,61 @@
     catch { /* optional storage */ }
   }
 
+  function postPurchaseAnsweredCount() {
+    return POST_PURCHASE_STAGES.filter((stage) => Boolean(postPurchaseAnswers[stage])).length;
+  }
+
+  function postPurchaseBatchComplete() {
+    return postPurchaseAnsweredCount() === POST_PURCHASE_STAGES.length;
+  }
+
+  function postPurchaseBatchSaved() {
+    return postPurchaseBatchComplete()
+      && !postPurchaseSaveInFlight
+      && !Object.keys(postPurchasePendingAnswers).length
+      && POST_PURCHASE_STAGES.every((stage) => postPurchaseSaveStates[stage] === 'saved');
+  }
+
+  function updatePostPurchaseFooterUi() {
+    const root = postPurchaseModalOverlay || document;
+    const status = $('#post-purchase-save-status', root);
+    const retry = $('#post-purchase-retry-save', root);
+    const plan = $('#post-purchase-plan-visit', root);
+    const book = $('#post-purchase-book-more', root);
+    const answered = postPurchaseAnsweredCount();
+    const complete = answered === POST_PURCHASE_STAGES.length;
+    const hasError = complete && POST_PURCHASE_STAGES.some((stage) => postPurchaseSaveStates[stage] === 'error');
+    const saved = postPurchaseBatchSaved();
+
+    if (status) {
+      if (postPurchaseSaveInFlight) {
+        status.textContent = 'Saving your answers…';
+      } else if (hasError) {
+        status.textContent = 'We could not save your answers. Please try again.';
+      } else if (saved) {
+        status.textContent = 'Your answers have been saved with this fireworks booking.';
+      } else if (answered === 0) {
+        status.textContent = 'Choose an answer for each of the four questions above. We will save them together.';
+      } else {
+        status.textContent = `${answered} of ${POST_PURCHASE_STAGES.length} answered. We will save them together once all four are complete.`;
+      }
+    }
+
+    if (retry) retry.hidden = !(hasError && !postPurchaseSaveInFlight);
+
+    if (plan) {
+      plan.classList.toggle('is-disabled', !saved);
+      plan.setAttribute('aria-disabled', saved ? 'false' : 'true');
+      if (saved) plan.removeAttribute('tabindex');
+      else plan.setAttribute('tabindex', '-1');
+    }
+    if (book) {
+      book.disabled = !saved;
+      book.classList.toggle('is-disabled', !saved);
+      book.setAttribute('aria-disabled', saved ? 'false' : 'true');
+    }
+  }
+
   function updatePostPurchaseChoiceUi(stage) {
     const root = postPurchaseModalOverlay || document;
     const card = $(`[data-post-stage="${CSS.escape(stage)}"]`, root);
@@ -742,14 +798,7 @@
       button.classList.toggle('is-selected', isSelected);
       button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
-
-    const status = $(`[data-post-save-state="${CSS.escape(stage)}"]`, card);
-    if (status) {
-      const saveState = postPurchaseSaveStates[stage] || (selected ? 'saved' : '');
-      status.textContent = saveState === 'saving' ? 'Saving…'
-        : saveState === 'error' ? 'Not saved'
-        : selected ? 'Saved' : '';
-    }
+    updatePostPurchaseFooterUi();
   }
 
   async function savePostPurchaseAnswers(answers) {
@@ -779,39 +828,46 @@
   }
 
   async function performPostPurchaseFlush() {
-    if (postPurchaseSaveInFlight) return;
-    const entries = Object.entries(postPurchasePendingAnswers);
-    if (!entries.length) return;
-
+    if (postPurchaseSaveInFlight || !postPurchaseBatchComplete()) return;
+    const batch = Object.fromEntries(POST_PURCHASE_STAGES.map((stage) => [stage, postPurchaseAnswers[stage]]));
     postPurchasePendingAnswers = {};
     postPurchaseSaveInFlight = true;
-    const batch = Object.fromEntries(entries);
+    POST_PURCHASE_STAGES.forEach((stage) => { postPurchaseSaveStates[stage] = 'saving'; });
+    postPurchaseError = '';
+    rememberPostPurchase(postPurchaseRegistration);
+    updatePostPurchaseFooterUi();
 
     try {
       await savePostPurchaseAnswers(batch);
-      Object.entries(batch).forEach(([stage, value]) => {
-        if (postPurchaseAnswers[stage] === value) {
+      POST_PURCHASE_STAGES.forEach((stage) => {
+        if (postPurchaseAnswers[stage] === batch[stage]) {
           postPurchaseSaveStates[stage] = 'saved';
-          updatePostPurchaseChoiceUi(stage);
-        }
-      });
-      rememberPostPurchase(postPurchaseRegistration);
-      postPurchaseError = '';
-    } catch (error) {
-      Object.entries(batch).forEach(([stage, value]) => {
-        if (postPurchaseAnswers[stage] === value) {
-          postPurchaseSaveStates[stage] = 'error';
-          updatePostPurchaseChoiceUi(stage);
         } else {
+          postPurchaseSaveStates[stage] = 'pending';
           postPurchasePendingAnswers[stage] = postPurchaseAnswers[stage];
         }
       });
-      rememberPostPurchase(postPurchaseRegistration);
-      postPurchaseError = error.message || 'We could not save one or more choices. Please try again.';
+      postPurchaseError = '';
+    } catch (error) {
+      POST_PURCHASE_STAGES.forEach((stage) => {
+        if (postPurchaseAnswers[stage] === batch[stage]) {
+          postPurchaseSaveStates[stage] = 'error';
+        } else {
+          postPurchaseSaveStates[stage] = 'pending';
+        }
+        postPurchasePendingAnswers[stage] = postPurchaseAnswers[stage];
+      });
+      postPurchaseError = error.message || 'We could not save your answers. Please try again.';
     } finally {
       postPurchaseSaveInFlight = false;
-      if (Object.keys(postPurchasePendingAnswers).length) {
-        window.setTimeout(() => flushPostPurchaseChoices(), 0);
+      rememberPostPurchase(postPurchaseRegistration);
+      updatePostPurchaseFooterUi();
+      if (!postPurchaseError && Object.keys(postPurchasePendingAnswers).length && postPurchaseBatchComplete()) {
+        if (postPurchaseSaveTimer) window.clearTimeout(postPurchaseSaveTimer);
+        postPurchaseSaveTimer = window.setTimeout(() => {
+          postPurchaseSaveTimer = null;
+          flushPostPurchaseChoices();
+        }, 160);
       }
     }
   }
@@ -819,26 +875,41 @@
   function queuePostPurchaseChoice(stage, value) {
     postPurchaseError = '';
     postPurchaseAnswers[stage] = value;
-    postPurchaseSaveStates[stage] = 'saving';
+    postPurchaseSaveStates[stage] = 'pending';
     postPurchasePendingAnswers[stage] = value;
     rememberPostPurchase(postPurchaseRegistration);
     updatePostPurchaseChoiceUi(stage);
 
-    if (postPurchaseSaveTimer) window.clearTimeout(postPurchaseSaveTimer);
-    postPurchaseSaveTimer = window.setTimeout(() => {
+    if (postPurchaseSaveTimer) {
+      window.clearTimeout(postPurchaseSaveTimer);
       postPurchaseSaveTimer = null;
-      flushPostPurchaseChoices();
-    }, 160);
+    }
+    if (postPurchaseBatchComplete()) {
+      postPurchaseSaveTimer = window.setTimeout(() => {
+        postPurchaseSaveTimer = null;
+        flushPostPurchaseChoices();
+      }, 160);
+    }
+  }
+
+  function retryPostPurchaseSave() {
+    if (!postPurchaseBatchComplete() || postPurchaseSaveInFlight) return;
+    postPurchaseError = '';
+    POST_PURCHASE_STAGES.forEach((stage) => {
+      postPurchaseSaveStates[stage] = 'pending';
+      postPurchasePendingAnswers[stage] = postPurchaseAnswers[stage];
+    });
+    rememberPostPurchase(postPurchaseRegistration);
+    updatePostPurchaseFooterUi();
+    flushPostPurchaseChoices();
   }
 
   async function resetAfterPostPurchase({ scrollToTickets = false } = {}) {
-    if (postPurchaseSaveTimer) { window.clearTimeout(postPurchaseSaveTimer); postPurchaseSaveTimer = null; }
-    await flushPostPurchaseChoices();
-    if (Object.keys(postPurchasePendingAnswers).length) await flushPostPurchaseChoices();
-    if (Object.values(postPurchaseSaveStates).some(state => state === 'error')) {
-      availabilityNotice('Some choices have not been saved. Please retry the choices marked Not saved before leaving this panel.');
-      return;
+    if (!postPurchaseBatchSaved()) {
+      updatePostPurchaseFooterUi();
+      return false;
     }
+    if (postPurchaseSaveTimer) { window.clearTimeout(postPurchaseSaveTimer); postPurchaseSaveTimer = null; }
     clearPendingPostPurchase();
     disposeFinishedTitoOverlay();
     finishedRegistration = null;
@@ -865,6 +936,7 @@
     }
 
     if (scrollToTickets) $('#tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return true;
   }
 
   async function showTicketSelectorAgain() {
@@ -873,7 +945,8 @@
 
   function leavePostPurchaseForVisit(event) {
     event?.preventDefault?.();
-    resetAfterPostPurchase({ scrollToTickets: false }).finally(() => {
+    resetAfterPostPurchase({ scrollToTickets: false }).then((completed) => {
+      if (!completed) return;
       const visit = $('#visit');
       if (visit) visit.scrollIntoView({ behavior: 'smooth', block: 'start' });
       else window.location.hash = 'visit';
@@ -899,8 +972,8 @@
       ? `Booking ${referenceHtml} is complete.`
       : 'Your booking is complete.';
     const optionalCopy = reference
-      ? `These are optional and save immediately against booking ${referenceHtml}.`
-      : 'These are optional and save immediately against this booking.';
+      ? `Choose an answer for each of the four questions below. We will save them together against booking ${referenceHtml}.`
+      : 'Choose an answer for each of the four questions below. We will save them together against this booking.';
 
     root.innerHTML = `
       <div class="post-purchase-card">
@@ -975,13 +1048,14 @@
           )}
         </div>
 
-        ${postPurchaseError ? `<p class="post-purchase-error" role="alert">${postPurchaseError}</p>` : ''}
-
         <div class="post-purchase-footer">
-          <p>Your answers are stored with this fireworks booking. There is no extra form to submit.</p>
+          <div class="post-purchase-save-summary">
+            <p id="post-purchase-save-status" aria-live="polite"></p>
+            <button type="button" class="post-purchase-retry-save" id="post-purchase-retry-save" hidden>Retry saving</button>
+          </div>
           <div class="post-purchase-footer-actions">
-            <a class="button button-dark" href="#visit" id="post-purchase-plan-visit">Plan your visit</a>
-            <button type="button" class="button button-outline" id="post-purchase-book-more">Book more tickets</button>
+            <a class="button button-dark is-disabled" href="#visit" id="post-purchase-plan-visit" aria-disabled="true" tabindex="-1">Plan your visit</a>
+            <button type="button" class="button button-outline is-disabled" id="post-purchase-book-more" aria-disabled="true" disabled>Book more tickets</button>
           </div>
         </div>
       </div>
@@ -992,8 +1066,16 @@
         queuePostPurchaseChoice(button.dataset.stage, button.dataset.value);
       });
     });
-    $('#post-purchase-plan-visit', root)?.addEventListener('click', leavePostPurchaseForVisit);
-    $('#post-purchase-book-more', root)?.addEventListener('click', showTicketSelectorAgain);
+    $('#post-purchase-retry-save', root)?.addEventListener('click', retryPostPurchaseSave);
+    $('#post-purchase-plan-visit', root)?.addEventListener('click', (event) => {
+      if (!postPurchaseBatchSaved()) { event.preventDefault(); updatePostPurchaseFooterUi(); return; }
+      leavePostPurchaseForVisit(event);
+    });
+    $('#post-purchase-book-more', root)?.addEventListener('click', () => {
+      if (!postPurchaseBatchSaved()) { updatePostPurchaseFooterUi(); return; }
+      showTicketSelectorAgain();
+    });
+    updatePostPurchaseFooterUi();
   }
 
   async function resetSelectorAfterFinishedCheckout() {

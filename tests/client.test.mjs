@@ -113,12 +113,25 @@ test('event overflow is reduced rather than transferred to a more expensive band
     assert.ok(!t.timers.some(x=>x.delay===0&&!x.cancelled));
   }finally{t.dom.window.close();}
 });
-test('leaving post-purchase immediately flushes the queued answer',async()=>{
+test('four post-purchase responses are batched into one write and exits wait for save',async()=>{
   const t=await setup({main:true,pending:true});try{
-    t.w.document.querySelector('[data-post-choice][data-stage="next_year"][data-value="no"]').click();
-    t.w.document.querySelector('#post-purchase-book-more').click();await t.settle();
-    assert.equal(t.writes.length,1);assert.equal(t.writes[0].answers.next_year,'no');
-    assert.equal(t.w.localStorage.getItem('wfdPendingPostPurchase2026'),null);
+    const root=t.w.document;
+    const plan=root.querySelector('#post-purchase-plan-visit');
+    const more=root.querySelector('#post-purchase-book-more');
+    assert.equal(plan.getAttribute('aria-disabled'),'true');assert.equal(more.disabled,true);
+    root.querySelector('[data-post-choice][data-stage="round_table_invite"][data-value="no"]').click();
+    root.querySelector('[data-post-choice][data-stage="cancellation"][data-value="refund"]').click();
+    root.querySelector('[data-post-choice][data-stage="next_year"][data-value="no"]').click();
+    assert.equal(t.writes.length,0);
+    assert.equal(t.timers.some(x=>x.delay===160&&!x.cancelled),false);
+    root.querySelector('[data-post-choice][data-stage="other_events"][data-value="no"]').click();
+    const save=t.timers.find(x=>x.delay===160&&!x.cancelled);assert.ok(save);
+    assert.equal(t.writes.length,0);assert.equal(more.disabled,true);
+    save.fn();await t.settle();
+    assert.equal(t.writes.length,1);
+    assert.deepEqual(Object.keys(t.writes[0].answers).sort(),['cancellation','next_year','other_events','round_table_invite']);
+    assert.match(root.querySelector('#post-purchase-save-status').textContent,/have been saved/i);
+    assert.equal(plan.getAttribute('aria-disabled'),'false');assert.equal(more.disabled,false);
   }finally{t.dom.window.close();}
 });
 test('successful polling uses 30 seconds and pauses while hidden',async()=>{
@@ -167,20 +180,30 @@ test('form submission cannot bypass an unacknowledged correction',async()=>{
     assert.equal(form.dispatchEvent(allowed),true);
   }finally{t.dom.window.close();}
 });
-test('failed post-purchase save remains Not saved after reload',async()=>{
+test('failed batched post-purchase save stays blocked after reload and can be retried',async()=>{
   let stored;
   const first=await setup({main:true,pending:true});try{
     first.setPostFailure(true);
-    first.w.document.querySelector('[data-post-choice][data-stage="next_year"][data-value="no"]').click();
-    const timer=first.timers.find(x=>x.delay===160&&!x.cancelled);
-    assert.ok(timer);
-    timer.fn();
-    await first.settle();
-    assert.match(first.w.document.querySelector('[data-post-save-state="next_year"]').textContent,/Not saved/);
+    for(const selector of [
+      '[data-post-choice][data-stage="round_table_invite"][data-value="no"]',
+      '[data-post-choice][data-stage="cancellation"][data-value="refund"]',
+      '[data-post-choice][data-stage="next_year"][data-value="no"]',
+      '[data-post-choice][data-stage="other_events"][data-value="no"]'
+    ]) first.w.document.querySelector(selector).click();
+    const timer=first.timers.find(x=>x.delay===160&&!x.cancelled);assert.ok(timer);
+    timer.fn();await first.settle();
+    assert.match(first.w.document.querySelector('#post-purchase-save-status').textContent,/could not save/i);
+    assert.equal(first.w.document.querySelector('#post-purchase-book-more').disabled,true);
+    assert.equal(first.w.document.querySelector('#post-purchase-retry-save').hidden,false);
     stored=JSON.parse(first.w.localStorage.getItem('wfdPendingPostPurchase2026'));
-    assert.equal(stored.saveStates.next_year,'error');
+    assert.ok(['error','pending'].includes(stored.saveStates.next_year));
   }finally{first.dom.window.close();}
   const second=await setup({main:true,pending:stored});try{
-    assert.match(second.w.document.querySelector('[data-post-save-state="next_year"]').textContent,/Not saved/);
+    assert.match(second.w.document.querySelector('#post-purchase-save-status').textContent,/could not save/i);
+    second.w.document.querySelector('#post-purchase-retry-save').click();
+    await second.settle();
+    assert.equal(second.writes.length,1);
+    assert.match(second.w.document.querySelector('#post-purchase-save-status').textContent,/have been saved/i);
+    assert.equal(second.w.document.querySelector('#post-purchase-book-more').disabled,false);
   }finally{second.dom.window.close();}
 });

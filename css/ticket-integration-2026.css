@@ -723,11 +723,26 @@ tito-widget input[type="submit"] {
   color: #fff;
 }
 
-.post-purchase-saved {
-  min-width: 3.2rem;
-  color: #5C6B43;
-  font-size: .8rem;
+.post-purchase-save-summary {
+  display: grid;
+  gap: 7px;
+}
+
+.post-purchase-retry-save {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--grey);
+  font: inherit;
+  font-size: .86rem;
   font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.post-purchase-retry-save[hidden] {
+  display: none !important;
 }
 
 .post-purchase-error {
@@ -761,6 +776,17 @@ tito-widget input[type="submit"] {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.post-purchase-footer-actions .button.is-disabled,
+.post-purchase-footer-actions .button:disabled,
+.post-purchase-footer-actions .button[aria-disabled="true"] {
+  background: #777873 !important;
+  border-color: #777873 !important;
+  color: #D9D9D5 !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
 }
 
 @media (max-width: 760px) {

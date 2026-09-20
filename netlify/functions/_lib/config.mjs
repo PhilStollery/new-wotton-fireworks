@@ -4,7 +4,7 @@ import { INTEGRATION_CONFIG_2026 } from "./integration-config-2026.mjs";
 const isProduction = () => process.env.CONTEXT === "production";
 
 export function deploymentMode() {
-  return isProduction() ? "live" : "test";
+  return "live";
 }
 
 export function getConfig() {

@@ -29,21 +29,37 @@ export const INTEGRATION_CONFIG_2026 = Object.freeze({
     }),
 
     // Production values are ordinary configuration and can be committed here.
-    // Fill these in once the live Tito releases/Activities are finalised.
+    // Confirmed from the live Tito 2026 event on 20 September 2026.
     live: Object.freeze({
-      eventCapacityActivityId: "",
-      superSaverActivityId: "",
-      advanceActivityId: "",
-      parkingCapacityActivityId: "",
+      eventCapacityActivityId: "1102976",
+      superSaverActivityId: "1102977",
+      advanceActivityId: "1102978",
+      parkingCapacityActivityId: "1102979",
+
+      // No separate general-parking Activity is present in Tito. Public paid and
+      // Blue Badge parking both use the shared # Parking Capacity Activity.
       generalParkingActivityId: "",
-      superSaverReleases: Object.freeze([]),
-      advanceReleases: Object.freeze([]),
-      standardReleases: Object.freeze([]),
-      preschoolRelease: "",
-      paidParkingRelease: "",
-      blueBadgeParkingRelease: "",
-      complimentaryAdmissionRelease: "",
-      complimentaryParkingRelease: ""
+
+      superSaverReleases: Object.freeze([
+        "cygycwzul7i",
+        "super-saver-secondary-sixth-form",
+        "rtnncvh9uya"
+      ]),
+      advanceReleases: Object.freeze([
+        "advance-primary-school-age",
+        "advance-secondary-sixth-form",
+        "advance-adult"
+      ]),
+      standardReleases: Object.freeze([
+        "child-ticket",
+        "standard-secondary-sixth-form",
+        "adult-ticket"
+      ]),
+      preschoolRelease: "pre-school-free",
+      paidParkingRelease: "parking",
+      blueBadgeParkingRelease: "blue-badge-parking",
+      complimentaryAdmissionRelease: "complimentary",
+      complimentaryParkingRelease: "complimentary-parking"
     })
   })
 });

@@ -69,6 +69,10 @@
     gate: { source: 'Gate', metadata: { source_route: 'gate', utm_source: 'gate', utm_medium: 'assisted_online', utm_campaign: 'fireworks_2026' } },
     poster: { source: 'Direct', metadata: { source_route: 'poster', utm_source: 'poster', utm_medium: 'qr', utm_campaign: 'fireworks_2026', utm_content: 'general' } },
     flyer: { source: 'Direct', metadata: { source_route: 'flyer', utm_source: 'flyer', utm_medium: 'qr', utm_campaign: 'fireworks_2026', utm_content: 'general' } },
+    cinema: {
+      source: 'cinema',
+      metadata: { source_route: 'cinema', utm_source: 'cinema', utm_medium: 'qr', utm_campaign: 'fireworks_2026' }
+    },
     facebook: { source: 'Direct', metadata: { source_route: 'facebook', utm_source: 'facebook', utm_medium: 'organic_social', utm_campaign: 'fireworks_2026', utm_content: 'general' } },
     'facebook-launch': { source: 'Direct', metadata: { source_route: 'facebook-launch', utm_source: 'facebook', utm_medium: 'organic_social', utm_campaign: 'fireworks_2026', utm_content: 'launch' } }
   };

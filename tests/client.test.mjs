@@ -52,6 +52,23 @@ test('KLB route credits KLB Friends while preserving the KLB Tito source',async(
     assert.equal(prefill.metadata.utm_source,'klb_friends');
   }finally{t.dom.window.close();}
 });
+test('cinema QR route attributes the Tito source without a beneficiary message',async()=>{
+  const routes=fs.readFileSync(new URL('../_redirects',import.meta.url),'utf8');
+  assert.match(routes,/^\/go\/cinema[ \t]+\/index\.html[ \t]+200[ \t]*$/m);
+  const t=await setup({main:true,url:'https://example.test/go/cinema'});
+  try{
+    const support=t.w.document.querySelector('#source-support');
+    assert.equal(support.hidden,true);
+    const widget=t.w.document.querySelector('tito-widget');
+    assert.ok(widget);
+    assert.equal(widget.getAttribute('source'),'cinema');
+    const metadata=JSON.parse(widget.getAttribute('prefill')).metadata;
+    assert.equal(metadata.source_route,'cinema');
+    assert.equal(metadata.utm_source,'cinema');
+    assert.equal(metadata.utm_medium,'qr');
+    assert.equal(metadata.utm_campaign,'fireworks_2026');
+  }finally{t.dom.window.close();}
+});
 function rows(t){
   const mount=t.w.document.querySelector('#tito-mount');mount.innerHTML='';
   for(const [key,slug,kind] of [['super-saver','super','admission'],['advance','advance','admission'],['standard','standard','admission'],['preschool','preschool','standalone'],['parking','parking','parking']]){

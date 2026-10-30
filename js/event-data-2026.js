@@ -48,7 +48,7 @@ window.FIREWORKS_EVENT = {
       eyebrow: "Free transport",
       title: "Bus",
       price: "",
-      copy: "Free buses will serve both Wotton-under-Edge and Charfield. Tell us which one you are most likely to use; exact stops and timings will be published once confirmed.",
+      copy: "Free shuttle buses run from Wotton-under-Edge (one 37-seat coach) and Charfield/Kingswood (two double-deckers). See the full timetables and boarding stops under Plan your visit.",
       preferenceOptions: [
         { label: "Bus from Wotton", value: "bus_wotton" },
         { label: "Bus from Charfield", value: "bus_charfield" }
@@ -74,7 +74,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       title: "Free bus",
-      copy: "The bus is free and will serve both Charfield and Wotton-under-Edge. Stops, first and last services and return arrangements will be published here when confirmed. Allow time to queue at busy periods."
+      copy: "Free buses serve Wotton-under-Edge and Charfield/Kingswood. Wotton departures start at 4.35pm; Charfield departures start at 4.30pm. The last return buses leave KLB at 8.30pm. See the timetable below, and allow time to queue."
     },
     {
       title: "Paid parking",
@@ -145,7 +145,7 @@ window.FIREWORKS_EVENT = {
     },
     {
       q: "How does the free bus work?",
-      a: "The event bus is free and will serve both Charfield and Wotton-under-Edge. We will publish the exact stops, timings and return arrangements here once they are confirmed. It is popular, so allow a little extra time for queues at the busiest points of the evening."
+      a: "Free buses run from Wotton-under-Edge (British School and War Memorial westbound) and Charfield/Kingswood (Charfield Primary eastbound and Railway Tavern eastbound). The Wotton coach has only 37 seats; the Charfield route uses two double-deckers. The last return buses leave KLB at 8.30pm. Full outward timetables, return stop locations and links to Google Maps are in the Free buses section under Plan your visit. Allow extra time to queue."
     },
     {
       q: "What happens if it rains?",

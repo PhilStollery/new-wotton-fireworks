@@ -1,0 +1,37 @@
+/* Free shuttle information, 7 November 2026. Keep isolated from Tito presentation styles. */
+.bus-timetable-shortcut a { color: #fbc15c; font-weight: 800; text-underline-offset: 4px; }
+.bus-guide { scroll-margin-top: 100px; margin: 30px 0 36px; padding: clamp(22px, 3.4vw, 38px); border-radius: 20px; border: 1px solid #54544c; background: #20201e; color: #fff; }
+.bus-guide-heading { max-width: 850px; }
+.bus-guide-heading h3 { max-width: 750px; font-size: clamp(1.6rem, 3.5vw, 2.6rem); line-height: 1.07; font-weight: 800; }
+.bus-guide-heading > p:last-child { color: rgba(255,255,255,.81); max-width: 780px; margin-top: 12px; }
+.bus-highlights { display: flex; flex-wrap: wrap; gap: 9px; margin: 22px 0 24px; }
+.bus-highlights span { display: inline-flex; gap: 7px; align-items: baseline; border: 1px solid #9b7c43; border-radius: 999px; background: #3a3224; padding: 8px 12px; color: #fff; font-size: .85rem; }
+.bus-highlights strong { color: #fbc15c; }
+.bus-routes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; align-items: stretch; }
+.bus-route-card { min-width: 0; border: 1px solid #54544c; border-radius: 16px; overflow: hidden; background: #292925; }
+.bus-route-head { padding: 23px 22px 18px; }
+.bus-route-label { margin: 0 0 8px; color: #fbc15c; text-transform: uppercase; font-weight: 800; letter-spacing: .1em; font-size: .72rem; }
+.bus-route-head h4 { font-size: clamp(1.13rem, 2.15vw, 1.55rem); line-height: 1.2; margin: 0; }
+.bus-route-head > p:last-child { color: rgba(255,255,255,.76); font-size: .89rem; line-height: 1.5; margin-top: 10px; }
+.bus-table-scroll { overflow-x: auto; margin: 0 15px; }
+.bus-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; table-layout: fixed; }
+.bus-table caption { text-align: left; caption-side: top; padding: 0 7px 8px; color: #fbc15c; font-size: .74rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.bus-table th { background: #3b3b34; border-bottom: 2px solid #fbc15c; padding: 11px 7px; color: #fff; font-size: .79rem; line-height: 1.25; text-align: center; }
+.bus-table th small { display: inline-block; color: #fbc15c; font-size: .72rem; font-weight: 600; margin-top: 4px; }
+.bus-table td { padding: 10px 7px; border-bottom: 1px solid #474740; text-align: center; font-weight: 700; white-space: nowrap; font-size: .88rem; }
+.bus-table tbody tr:nth-child(even) { background: rgba(255,255,255,.035); }
+.bus-table tbody tr:last-child td { border-bottom: none; }
+.bus-stop-notes { padding: 22px 23px 25px; }
+.bus-stop-notes h5 { margin: 0 0 9px; font-size: .91rem; color: #fbc15c; }
+.bus-stop-notes ul { margin: 0; padding-left: 20px; }
+.bus-stop-notes li { margin-top: 9px; color: rgba(255,255,255,.8); font-size: .85rem; line-height: 1.55; }
+.bus-stop-notes strong { color: #fff; }
+.bus-stop-notes a { display: inline-block; color: #fbc15c; font-weight: 800; text-underline-offset: 3px; }
+.bus-stop-notes a:focus-visible,.bus-timetable-shortcut a:focus-visible { outline: 3px solid #fbc15c; outline-offset: 3px; }
+.bus-return-info { display: grid; grid-template-columns: minmax(200px, .52fr) 1fr; align-items: start; gap: 25px; margin-top: 18px; padding: 24px; background: #3a3224; border: 1px solid #9b7c43; border-radius: 14px; }
+.bus-return-eyebrow { display: block; margin-bottom: 6px; color: #fbc15c; text-transform: uppercase; font-size: .72rem; font-weight: 800; letter-spacing: .08em; }
+.bus-return-info h4 { margin: 0; font-size: 1.22rem; line-height: 1.2; }
+.bus-return-info p { margin: 0; color: rgba(255,255,255,.86); font-size: .91rem; line-height: 1.58; }
+.bus-footnote { color: rgba(255,255,255,.67); font-size: .78rem; margin-top: 14px; }
+@media (max-width: 850px) { .bus-routes { grid-template-columns: 1fr; } .bus-return-info { grid-template-columns: 1fr; gap: 9px; } }
+@media (max-width: 550px) { .bus-guide { margin: 20px 0 28px; padding: 18px 14px; scroll-margin-top: 82px; } .bus-route-head { padding: 19px 16px 15px; } .bus-stop-notes { padding: 18px 17px 22px; } .bus-table th { font-size: .73rem; } .bus-table td { font-size: .82rem; } .bus-return-info { padding: 19px 17px; } }

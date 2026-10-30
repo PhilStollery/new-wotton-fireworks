@@ -24,6 +24,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/fireworks-2026.css">
   <link rel="stylesheet" href="css/ticket-integration-2026.css">
+  <link rel="stylesheet" href="css/buses-2026.css">
 
   <script type="application/ld+json">
   {
@@ -65,6 +66,7 @@
         <a href="#whats-on">What's on</a>
         <a href="#tickets">Tickets</a>
         <a href="#visit">Plan your visit</a>
+        <a href="#buses">Free buses</a>
         <a href="#faq">FAQ</a>
         <a class="nav-cta" href="#tickets">Tickets</a>
       </nav>
@@ -90,6 +92,7 @@
         </div>
         <div class="actions">
           <a class="button button-primary" href="#tickets">Get tickets</a>
+          <a class="button button-ghost" href="#buses">Free bus timetable</a>
         </div>
       </div>
     </section>
@@ -143,6 +146,7 @@
         <div class="travel-intro">
           <h3>How are you getting here?</h3>
           <p>If you need parking, select it with your admission booking. Everyone enters through the Wotton Community Sports Centre entrance.</p>
+          <p class="bus-timetable-shortcut"><a href="#buses">View free bus stops and timetables</a></p>
         </div>
         <div id="travel-choices" class="travel-strip" aria-label="Travel options"></div>
 
@@ -169,6 +173,86 @@
         </div>
 
         <div id="visit-grid" class="visit-grid"></div>
+
+        <section class="bus-guide" id="buses" aria-labelledby="bus-guide-title">
+          <div class="bus-guide-heading">
+            <p class="kicker">Free shuttle buses</p>
+            <h3 id="bus-guide-title">Leave the car at home. Get the bus.</h3>
+            <p>Free buses run from Wotton-under-Edge and Charfield/Kingswood to the Wotton Community Sports Centre entrance at KLB on Saturday 7 November. You'll still need an event admission ticket.</p>
+          </div>
+
+          <div class="bus-highlights" aria-label="Key bus information">
+            <span><strong>Wotton</strong> 37-seat coach</span>
+            <span><strong>Charfield</strong> Two double-deckers</span>
+            <span><strong>Last return</strong> 8:30pm from KLB</span>
+          </div>
+
+          <div class="bus-routes">
+            <article class="bus-route-card" aria-labelledby="bus-wotton-title">
+              <div class="bus-route-head">
+                <p class="bus-route-label">Route 2 · Wotton-under-Edge</p>
+                <h4 id="bus-wotton-title">British School → War Memorial → KLB</h4>
+                <p>One 37-seat coach, with outward departures approximately every 45 minutes. Capacity is limited, particularly for later journeys.</p>
+              </div>
+              <div class="bus-table-scroll">
+                <table class="bus-table">
+                  <caption>Wotton outward timetable</caption>
+                  <thead><tr><th scope="col">British School</th><th scope="col">War Memorial<br><small>westbound</small></th><th scope="col">KLB<br><small>arrives</small></th></tr></thead>
+                  <tbody>
+                    <tr><td>4:35pm</td><td>4:45pm</td><td>4:55pm</td></tr>
+                    <tr><td>5:20pm</td><td>5:30pm</td><td>5:40pm</td></tr>
+                    <tr><td>6:05pm</td><td>6:15pm</td><td>6:25pm</td></tr>
+                    <tr><td>6:50pm</td><td>7:00pm</td><td>7:10pm</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bus-stop-notes">
+                <h5>Where to board</h5>
+                <ul>
+                  <li><strong>British School:</strong> Wait on the same side of the road as the school, outside the grounds. Do not enter the school or obstruct the turning area, which must remain clear for the coach. Return drop-off is on the opposite side. <a href="https://www.google.com/maps/dir/?api=1&amp;destination=The%20British%20School%2C%20Wotton-under-Edge" target="_blank" rel="noopener">Directions to British School</a></li>
+                  <li><strong>War Memorial:</strong> Board at the westbound stop. Return drop-off is at the eastbound stop. <a href="https://www.google.com/maps/dir/?api=1&amp;destination=Wotton-under-Edge%20War%20Memorial" target="_blank" rel="noopener">Directions to War Memorial</a></li>
+                </ul>
+              </div>
+            </article>
+
+            <article class="bus-route-card" aria-labelledby="bus-charfield-title">
+              <div class="bus-route-head">
+                <p class="bus-route-label">Route 1 · Charfield &amp; Kingswood</p>
+                <h4 id="bus-charfield-title">Charfield Primary → Railway Tavern → KLB</h4>
+                <p>Two double-decker buses operate a combined outward service every 20 minutes.</p>
+              </div>
+              <div class="bus-table-scroll">
+                <table class="bus-table">
+                  <caption>Charfield outward timetable</caption>
+                  <thead><tr><th scope="col">Charfield Primary<br><small>eastbound</small></th><th scope="col">Railway Tavern<br><small>eastbound</small></th></tr></thead>
+                  <tbody>
+                    <tr><td>4:30pm</td><td>4:35pm</td></tr>
+                    <tr><td>4:50pm</td><td>4:55pm</td></tr>
+                    <tr><td>5:10pm</td><td>5:15pm</td></tr>
+                    <tr><td>5:30pm</td><td>5:35pm</td></tr>
+                    <tr><td>5:50pm</td><td>5:55pm</td></tr>
+                    <tr><td>6:10pm</td><td>6:15pm</td></tr>
+                    <tr><td>6:30pm</td><td>6:35pm</td></tr>
+                    <tr><td>6:50pm</td><td>6:55pm</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="bus-stop-notes">
+                <h5>Where to board</h5>
+                <ul>
+                  <li><strong>Charfield Primary School:</strong> Use the eastbound stop for both outward and return journeys. <a href="https://www.google.com/maps/dir/?api=1&amp;destination=Charfield%20Primary%20School" target="_blank" rel="noopener">Directions to Charfield Primary</a></li>
+                  <li><strong>Railway Tavern:</strong> Board at the eastbound stop. Return buses drop off at the westbound stop. <a href="https://www.google.com/maps/dir/?api=1&amp;destination=Railway%20Tavern%2C%20Charfield" target="_blank" rel="noopener">Directions to Railway Tavern</a></li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="bus-return-info">
+            <div><span class="bus-return-eyebrow">Getting home</span><h4>Return buses after the main display</h4></div>
+            <p>Both routes return from the event bus loading area at KLB. Follow the marshals' directions and allow time to queue. The <strong>last scheduled departure from KLB is 8:30pm</strong>. Wotton buses return via the War Memorial eastbound stop and British School; Charfield buses return via Railway Tavern westbound and Charfield Primary eastbound. There are no stops at Westfields or Symn Lane.</p>
+          </div>
+          <p class="bus-footnote">Times are scheduled and may vary with traffic and loading. Google Maps links show the stop area: follow the stated side of the road and any event signage when boarding.</p>
+        </section>
 
         <div class="venue-map-card">
           <div class="venue-map-copy">

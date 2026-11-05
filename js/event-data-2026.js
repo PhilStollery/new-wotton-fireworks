@@ -444,7 +444,7 @@ window.FIREWORKS_EVENT = {
         <div class="ticket-step-content"></div>
       </section>
       <section class="ticket-step-panel step-travel" data-ticket-step="2">
-        <div class="ticket-step-head"><p class="ticket-step-label">Step 2</p><h3>Decide how you'll get there</h3><p>Parking is sold out. Please walk or use a free shuttle bus unless you already have a parking ticket.</p></div>
+        <div class="ticket-step-head"><p class="ticket-step-label">Step 2</p><h3>Decide how you'll get there</h3><p><strong>Parking is sold out.</strong> Please walk or use a free shuttle bus unless you already have a parking ticket.</p></div>
         <div class="ticket-step-content"></div>
       </section>
       <section class="ticket-step-panel step-get-tickets" data-ticket-step="3">
@@ -484,7 +484,7 @@ window.FIREWORKS_EVENT = {
     if (!intro) return;
     let note = intro.querySelector('.travel-planning-note');
     if (!note) { note = document.createElement('p'); note.className = 'travel-planning-note'; intro.appendChild(note); }
-    note.innerHTML = '<strong>Parking is sold out.</strong> If you have not already booked parking, please walk or take the free shuttle bus. This choice only helps us plan likely demand; it does not commit you to a travel method.';
+    note.innerHTML = '<strong>Travel planning only.</strong> Your choice helps us estimate demand and does not commit you to a travel method.';
   }
 
   function enhanceTravelCards() {

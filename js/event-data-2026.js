@@ -55,11 +55,11 @@ window.FIREWORKS_EVENT = {
       ]
     },
     {
-      eyebrow: "Pre-booked",
+      eyebrow: "Parking sold out",
       title: "Drive",
       price: "",
-      copy: "If you are planning on driving to the event, please make sure you have booked parking. Wotton Road will be closed to non-ticket holders and you will not be able to park there. There is no access to the event from New Road; do not use it for parking.",
-      preferenceOptions: [{ label: "Driving", value: "park" }]
+      copy: "Only drive if you already have a parking ticket. Wotton Road will be closed to non-ticket holders and there is no parking or access via New Road. Otherwise, please walk or use the free bus. Parking spaces are limited, so book early next year!",
+      preferenceOptions: [{ label: "Parking already booked", value: "park" }]
     }
   ],
 
@@ -487,7 +487,7 @@ window.FIREWORKS_EVENT = {
     if (!intro) return;
     let note = intro.querySelector('.travel-planning-note');
     if (!note) { note = document.createElement('p'); note.className = 'travel-planning-note'; intro.appendChild(note); }
-    note.innerHTML = '<strong>This only helps us plan likely demand.</strong> It does not commit you to a travel method and you do not need to tell us if your plans change. Parking is only reserved by choosing a parking ticket in Step 3.';
+    note.innerHTML = '<strong>Travel planning only.</strong> Your choice helps us estimate demand and does not commit you to a travel method.';
   }
 
   function enhanceTravelCards() {

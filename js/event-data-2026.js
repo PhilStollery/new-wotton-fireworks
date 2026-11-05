@@ -53,13 +53,6 @@ window.FIREWORKS_EVENT = {
         { label: "Bus from Wotton", value: "bus_wotton" },
         { label: "Bus from Charfield", value: "bus_charfield" }
       ]
-    },
-    {
-      eyebrow: "Pre-booked",
-      title: "Drive",
-      price: "",
-      copy: "If you are planning on driving to the event, please make sure you have booked parking. Wotton Road will be closed to non-ticket holders and you will not be able to park there. There is no access to the event from New Road; do not use it for parking.",
-      preferenceOptions: [{ label: "Driving", value: "park" }]
     }
   ],
 
@@ -290,7 +283,7 @@ window.FIREWORKS_EVENT = {
       .ticket-step-panel .source-support-card p{margin:.16rem 0 0!important;color:rgba(255,255,255,.7)!important;font-size:.8rem!important}
 
       /* Travel planning is optional. Keep choices aligned at the bottom. */
-      #travel-choices.travel-strip{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0!important;align-items:stretch!important}
+      #travel-choices.travel-strip{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:0!important;align-items:stretch!important}
       .travel-intro{margin:0 0 12px!important}.travel-intro h3{display:none!important}
       .travel-intro>p:not(.travel-planning-note){font-size:.88rem!important;margin:0 0 5px!important;color:rgba(255,255,255,.76)!important}
       .travel-planning-note{margin:.25rem 0 0!important;color:rgba(255,255,255,.68)!important;font-size:.79rem!important;line-height:1.48}
@@ -451,7 +444,7 @@ window.FIREWORKS_EVENT = {
         <div class="ticket-step-content"></div>
       </section>
       <section class="ticket-step-panel step-travel" data-ticket-step="2">
-        <div class="ticket-step-head"><p class="ticket-step-label">Step 2</p><h3>Decide how you'll get there</h3><p>Tell us what you currently expect to do so we can plan likely demand.</p></div>
+        <div class="ticket-step-head"><p class="ticket-step-label">Step 2</p><h3>Decide how you'll get there</h3><p>Parking is sold out. Please walk or use a free shuttle bus unless you already have a parking ticket.</p></div>
         <div class="ticket-step-content"></div>
       </section>
       <section class="ticket-step-panel step-get-tickets" data-ticket-step="3">
@@ -471,6 +464,10 @@ window.FIREWORKS_EVENT = {
   function readTravel() {
     if (travelValue) return travelValue;
     try { travelValue = String(localStorage.getItem(TRAVEL_KEY) || ''); } catch { travelValue = ''; }
+    if (travelValue === 'park') {
+      travelValue = '';
+      try { localStorage.removeItem(TRAVEL_KEY); } catch { /* optional */ }
+    }
     return travelValue;
   }
 
@@ -487,7 +484,7 @@ window.FIREWORKS_EVENT = {
     if (!intro) return;
     let note = intro.querySelector('.travel-planning-note');
     if (!note) { note = document.createElement('p'); note.className = 'travel-planning-note'; intro.appendChild(note); }
-    note.innerHTML = '<strong>This only helps us plan likely demand.</strong> It does not commit you to a travel method and you do not need to tell us if your plans change. Parking is only reserved by choosing a parking ticket in Step 3.';
+    note.innerHTML = '<strong>Parking is sold out.</strong> If you have not already booked parking, please walk or take the free shuttle bus. This choice only helps us plan likely demand; it does not commit you to a travel method.';
   }
 
   function enhanceTravelCards() {

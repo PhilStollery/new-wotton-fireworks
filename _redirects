@@ -2,8 +2,8 @@
 https://new-wotton.netlify.com/* https://wotton-firework-display.co.uk/:splat 301!
 
 # Stable public routes
-/visit /#visit 302
-/tickets /#tickets 302
+/visit / 302
+/tickets / 302
 /terms /terms.html 200
 /privacy /privacy.html 200
 
